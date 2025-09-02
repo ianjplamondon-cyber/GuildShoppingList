@@ -1,7 +1,10 @@
 ## Interface: 11502
 ## Title: Guild Shopping List
 ## Notes: A simple, sharable guild shopping list.
-## Author: YourName
+## Author: 
+## Version: @project-version@
+
+## X-Curse-Project-ID: 1337470
 
 ## SavedVariables: GuildShoppingList_GSLDataSyncTimestamp, GuildShoppingList_SavedItems, GuildShoppingList_BankCache, GuildShoppingList_GSLBankCache, GuildShoppingList_GSLPlayerCache
 
