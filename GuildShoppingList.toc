@@ -1,4 +1,4 @@
-## Interface: 11502
+## Interface: 11507
 ## Title: Guild Shopping List
 ## Notes: A simple, sharable guild shopping list.
 ## Author: Pimptasty
