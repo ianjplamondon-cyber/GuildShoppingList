@@ -1,7 +1,7 @@
 ## Interface: 11502
 ## Title: Guild Shopping List
 ## Notes: A simple, sharable guild shopping list.
-## Author: 
+## Author: Pimptasty
 ## Version: @project-version@
 
 ## X-Curse-Project-ID: 1337470
