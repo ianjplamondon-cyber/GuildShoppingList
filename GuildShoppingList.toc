@@ -1,0 +1,22 @@
+## Interface: 11502
+## Title: Guild Shopping List
+## Notes: A simple, sharable guild shopping list.
+## Author: YourName
+
+## SavedVariables: GuildShoppingList_GSLDataSyncTimestamp, GuildShoppingList_SavedItems, GuildShoppingList_BankCache, GuildShoppingList_GSLBankCache, GuildShoppingList_GSLPlayerCache
+
+Recipes/AlchemyRecipes.lua
+Recipes/EngineeringSchematics.lua
+Recipes/BlacksmithingPlans.lua
+Recipes/LeatherworkingPatterns.lua
+Recipes/TailoringPatterns.lua
+Recipes/CookingRecipes.lua
+Recipes/EnchantingFormulae.lua
+GuildShoppingList.lua
+Libs\LibStub\LibStub.lua
+Libs\CallbackHandler-1.0\CallbackHandler-1.0.lua
+Libs\AceAddon-3.0\AceAddon-3.0.xml
+Libs\AceConsole-3.0\AceConsole-3.0.xml
+Libs\AceComm-3.0\AceComm-3.0.xml
+Libs\AceSerializer-3.0\AceSerializer-3.0.xml
+Libs\LibDBIcon-1.0\LibDBIcon-1.0\Lib.xml
