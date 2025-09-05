@@ -1370,14 +1370,14 @@ end
 CenterBottomButtons()
 
 -- Show the GSL Reagent Tracker overlay when the addon is loaded
-local gslOverlayInitFrame = CreateFrame("Frame")
-gslOverlayInitFrame:RegisterEvent("ADDON_LOADED")
-gslOverlayInitFrame:SetScript("OnEvent", function(self, event, arg1)
-    if arg1 == addonName then
-        UpdateGSLReagentOverlay()
-        GSLReagentOverlayFrame:Show()
-    end
-end)
+--local gslOverlayInitFrame = CreateFrame("Frame")
+--gslOverlayInitFrame:RegisterEvent("ADDON_LOADED")
+--gslOverlayInitFrame:SetScript("OnEvent", function(self, event, arg1)
+--    if arg1 == addonName then
+--        UpdateGSLReagentOverlay()
+--        GSLReagentOverlayFrame:Show()
+--    end
+--end)
 
 -- Register comms on enable
 function GSL:OnEnable()
