@@ -1,6 +1,8 @@
 # .pkgmeta
 package-as: GuildShoppingList
 
+curseforge-project-id: 1337470
+
 # Pull externals (examples — remove if you don’t need them)
 # externals:
 #   Libs/LibStub: https://repos.wowace.com/wow/libstub/trunk
