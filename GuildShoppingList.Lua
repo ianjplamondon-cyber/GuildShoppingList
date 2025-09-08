@@ -174,6 +174,32 @@ frame.title = frame:CreateFontString(nil, "OVERLAY")
 frame.title:SetFontObject("GameFontHighlight")
 frame.title:SetPoint("CENTER", frame.TitleBg, "CENTER", 0, 0)
 frame.title:SetText("Guild Shopping List")
+frame.gslPlayerText = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+frame.gslPlayerText:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -20, -35)
+frame.gslPlayerText:SetText("")
+
+-- Tooltip for GSL player text
+frame.gslPlayerText:EnableMouse(true)
+frame.gslPlayerText:SetScript("OnEnter", function(self)
+    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+    GameTooltip:SetText("The GSL player is where you should send materials for the shopping list.", nil, nil, nil, nil, true)
+    GameTooltip:Show()
+end)
+frame.gslPlayerText:SetScript("OnLeave", function(self)
+    GameTooltip:Hide()
+end)
+
+local function UpdateGSLPlayerText()
+    local playerName = UnitName("player")
+    local gslPlayer = GetGSLPlayer and GetGSLPlayer() or "unknown"
+    if gslPlayer ~= playerName then
+        frame.gslPlayerText:SetText("Current GSL player: |cffffff00" .. gslPlayer .. "|r")
+        frame.gslPlayerText:Show()
+    else
+        frame.gslPlayerText:SetText("")
+        frame.gslPlayerText:Hide()
+    end
+end
 
 -- Make the frame draggable
 frame:SetMovable(true)
@@ -583,6 +609,7 @@ local function UpdateGSLControlsVisibility()
         end
         -- Always show the clear button
         clearButton:Show()
+    frame.gslPlayerText:Hide()
     else
         professionDropdown:Hide()
         addButton:Hide()
@@ -598,6 +625,7 @@ local function UpdateGSLControlsVisibility()
         end
         -- Always show the clear button
         clearButton:Show()
+    UpdateGSLPlayerText()
     end
 end
 
@@ -606,6 +634,7 @@ UpdateRemoveButtonVisibility()
 UpdateSyncButtonVisibility()
 UpdateGSLControlsVisibility()
 UpdateGuildSyncButtonVisibility()
+UpdateGSLPlayerText()
 
 -- Utility: Get total count of an item in bags and bank
 local function GetTotalItemCount(itemName)
