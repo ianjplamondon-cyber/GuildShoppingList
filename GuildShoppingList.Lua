@@ -469,7 +469,11 @@ function UpdateList()
         end
         btn:SetPoint("LEFT", fs, "RIGHT", 10, 0)
         btn:SetScript("OnClick", function() EditItemQuantity(i) end)
-        btn:Show()
+        if GetGSLPlayer() == UnitName("player") then
+            btn:Show()
+        else
+            btn:Hide()
+        end
 
         -- Remove ("X") button
         local rbtn = removeButtons[i]
@@ -488,7 +492,11 @@ function UpdateList()
             table.remove(items, i)
             UpdateList()
         end)
-        rbtn:Show()
+        if GetGSLPlayer() == UnitName("player") then
+            rbtn:Show()
+        else
+            rbtn:Hide()
+        end
 
         yOffset = yOffset + lineHeight
     end
