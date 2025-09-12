@@ -841,18 +841,19 @@ local GSL_SYNC_VARS = {
 GuildShoppingList_GSLDataSyncTimestamp = GuildShoppingList_GSLDataSyncTimestamp or nil
 
 function GSL:ShareShoppingList()
+    -- Only update timestamp if data has changed elsewhere (not here)
+    GuildShoppingList_GSLDataSyncTimestamp = GuildShoppingList_GSLDataSyncTimestamp or time()
     local syncData = {
         player = UnitName("player"),
         GuildShoppingList_SavedItems = GuildShoppingList_SavedItems,
         GuildShoppingList_GSLBankCache = GuildShoppingList_GSLBankCache,
         GuildShoppingList_GSLPlayerCache = GuildShoppingList_GSLPlayerCache,
-        GuildShoppingList_GSLDataSyncTimestamp = time(), -- Add timestamp to sync
+        GuildShoppingList_GSLDataSyncTimestamp = GuildShoppingList_GSLDataSyncTimestamp,
         -- add more variables here if you want to sync them
     }
-    GuildShoppingList_GSLDataSyncTimestamp = syncData.GuildShoppingList_GSLDataSyncTimestamp -- Save locally for GSL player
     local serialized = self:Serialize(syncData)
     self:SendCommMessage("GSLShare", serialized, "GUILD")
-    print("|cff00ff00[GSL]|r Shared GuildShoppingList data (explicit variables) to guild.")
+    print("|cff00ff00[GSL]|r Shared GuildShoppingList data (explicit variables) to guild. Timestamp: " .. tostring(GuildShoppingList_GSLDataSyncTimestamp))
 end
 
 -- Slash command for /gslshare (AceComm-based sync)
@@ -991,22 +992,27 @@ gslGuildFrame:SetScript("OnEvent", function(self, event)
 end)
 
 -- Request a guild roster update on login/reload
-local initFrame = CreateFrame("Frame")
-initFrame:RegisterEvent("ADDON_LOADED")
-initFrame:SetScript("OnEvent", function(self, event, arg1)
-    if arg1 == addonName then
-        GuildShoppingList_SavedItems = GuildShoppingList_SavedItems or {}
-        items = GuildShoppingList_SavedItems
-        GuildShoppingList_ReagentData = GuildShoppingList_ReagentData or {}
-        GuildRoster() 
-        UpdateList()
-        ScanAndSaveReagents()
-        if GetGSLPlayer() == UnitName("player") then
-            CacheGSLInventory()
+function GSL:OnInitialize()
+    print("|cff00ff00[GSL]|r [DEBUG] GSL:OnInitialize called.")
+    GuildShoppingList_SavedItems = GuildShoppingList_SavedItems or {}
+    items = GuildShoppingList_SavedItems
+    GuildShoppingList_ReagentData = GuildShoppingList_ReagentData or {}
+end
+
+function GSL:OnEnable()
+    print("|cff00ff00[GSL]|r [DEBUG] GSL:OnEnable called. Registering AceComm callbacks.")
+    self:RegisterComm("GSLShare")
+    self:RegisterComm("GSLRequest")
+    GuildRoster()
+    UpdateList()
+    ScanAndSaveReagents()
+    if GetGSLPlayer() == UnitName("player") then
+        CacheGSLInventory()
+        if GSL and GSL.RequestGSLData then
+            GSL:RequestGSLData()
         end
-        
     end
-end)
+end
 
 -- Tabs
 local tabFrame = CreateFrame("Frame", "GuildShoppingListTabFrame", frame)
@@ -1418,8 +1424,12 @@ CenterBottomButtons()
 
 -- Register comms on enable
 function GSL:OnEnable()
+    print("|cff00ff00[GSL]|r [DEBUG] GSL:OnEnable called. Registering AceComm callbacks.")
     self:RegisterComm("GSLShare")
     self:RegisterComm("GSLRequest")
+    if self.RegisterMessage then
+        self:RegisterMessage("OnCommReceived")
+    end
 end
 
 -- RequestGSLData: Ask the guild for the latest GSL data
@@ -1432,11 +1442,14 @@ end
 -- OnCommReceived: Handle incoming data and requests
 function GSL:OnCommReceived(prefix, message, distribution, sender)
     if prefix == "GSLShare" then
+        print("|cff00ff00[GSL]|r [DEBUG] Received GSLShare from " .. (sender or "unknown") .. ". Message: " .. tostring(message))
         local success, syncData = self:Deserialize(message)
         if success and type(syncData) == "table" then
             local incomingTimestamp = tonumber(syncData.GuildShoppingList_GSLDataSyncTimestamp or 0)
             local localTimestamp = tonumber(GuildShoppingList_GSLDataSyncTimestamp or 0)
+            print("|cff00ff00[GSL]|r [DEBUG] Incoming timestamp: " .. tostring(incomingTimestamp) .. ", Local timestamp: " .. tostring(localTimestamp))
             if incomingTimestamp > localTimestamp then
+                print("|cff00ff00[GSL]|r [DEBUG] Updating local data from " .. (syncData.player or sender))
                 GuildShoppingList_SavedItems = syncData.GuildShoppingList_SavedItems or {}
                 GuildShoppingList_GSLBankCache = syncData.GuildShoppingList_GSLBankCache or {}
                 GuildShoppingList_GSLPlayerCache = syncData.GuildShoppingList_GSLPlayerCache or {}
@@ -1445,13 +1458,18 @@ function GSL:OnCommReceived(prefix, message, distribution, sender)
                 if UpdateList then UpdateList() end
                 if UpdateReagentList then UpdateReagentList() end
             else
-                print("|cffffff00[GSL]|r Received older or same data from " .. (syncData.player or sender) .. "; ignoring.")
+                print("|cffffff00[GSL]|r [DEBUG] Received older or same data from " .. (syncData.player or sender) .. "; ignoring.")
             end
+        else
+            print("|cffff0000[GSL]|r [DEBUG] Failed to deserialize GSLShare message from " .. (sender or "unknown") .. ".")
         end
     elseif prefix == "GSLRequest" then
+        print("|cff00ff00[GSL]|r [DEBUG] Received GSLRequest from " .. (sender or "unknown") .. ". Message: " .. tostring(message))
         local requesterTimestamp = tonumber(message or 0)
         local localTimestamp = tonumber(GuildShoppingList_GSLDataSyncTimestamp or 0)
+        print("|cff00ff00[GSL]|r [DEBUG] Requester timestamp: " .. tostring(requesterTimestamp) .. ", Local timestamp: " .. tostring(localTimestamp))
         if localTimestamp > requesterTimestamp then
+            print("|cff00ff00[GSL]|r [DEBUG] Sending updated data to " .. sender)
             -- Send data to the requester only
             local syncData = {
                 player = UnitName("player"),
@@ -1463,6 +1481,8 @@ function GSL:OnCommReceived(prefix, message, distribution, sender)
             local serialized = self:Serialize(syncData)
             self:SendCommMessage("GSLShare", serialized, "WHISPER", sender)
             print("|cff00ff00[GSL]|r Sent GuildShoppingList data to " .. sender .. ".")
+        else
+            print("|cffffff00[GSL]|r [DEBUG] Local data is not newer than requester; not sending.")
         end
     end
 end
