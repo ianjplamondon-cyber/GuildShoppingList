@@ -20,3 +20,6 @@ ignore:
   - "**/*.ps1"
   - "**/*.bat"
   - "*.code-workspace"
+  - GSLOverlay.png
+  - GSLReagentList.png
+  - GSLShoppingList.png
