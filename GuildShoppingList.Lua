@@ -547,8 +547,16 @@ broadcastButton:SetPoint("LEFT", clearButton, "RIGHT", 10, 0)
 broadcastButton:SetSize(120, 30)
 broadcastButton:SetText("Sync GSL Data")
 broadcastButton:SetScript("OnClick", function()
-    -- Call the same sync as /gslshare
-    GSL:ShareShoppingList()
+    -- Only allow full sync for the GSL player
+    if GetGSLPlayer() == UnitName("player") then
+        CacheGSLInventory()
+        ScanAndSaveReagents()
+        GuildShoppingList_GSLDataSyncTimestamp = time()
+        GSL:ShareShoppingList()
+    else
+        -- Non-GSL player: keep existing behavior (if any)
+        print("|cffff0000[GSL]|r Only the GSL player can broadcast a full sync.")
+    end
 end)
 
 -- Remove Button
@@ -697,7 +705,7 @@ local function GetTotalItemCount(itemName)
 end
 
 -- Utility: Scan your own reagents and save to SavedVariables
-local function ScanAndSaveReagents()
+function ScanAndSaveReagents()
     local reagentCounts = {}
     -- Aggregate all reagents from the current shopping list
     local reagentTotals = {}
@@ -938,7 +946,7 @@ end
 UpdateRemoveButtonVisibility()
 
 -- Utility: Scan the GSL player's current inventory and save to SavedVariables
-local function CacheGSLInventory()
+function CacheGSLInventory()
     local playerName = UnitName("player")
     if GetGSLPlayer() == playerName then
         local inventory = {}
