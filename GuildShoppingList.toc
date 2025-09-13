@@ -6,7 +6,7 @@
 
 ## X-Curse-Project-ID: 1337470
 
-## SavedVariables: GuildShoppingList_GSLDataSyncTimestamp, GuildShoppingList_SavedItems, GuildShoppingList_BankCache, GuildShoppingList_GSLBankCache, GuildShoppingList_GSLPlayerCache
+## SavedVariables: GuildShoppingList_GSLDataSyncTimestamp, GuildShoppingList_SavedItems, GuildShoppingList_BankCache, GuildShoppingList_GSLBankCache, GuildShoppingList_GSLPlayerCache, GuildShoppingList_Config
 
 Recipes/AlchemyRecipes.lua
 Recipes/EngineeringSchematics.lua

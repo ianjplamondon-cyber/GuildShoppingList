@@ -1,3 +1,30 @@
+-- Debug configuration
+GuildShoppingList_Config = GuildShoppingList_Config or {}
+if GuildShoppingList_Config.DebugEnabled == nil then
+    GuildShoppingList_Config.DebugEnabled = false
+end
+
+function GSLDebugPrint(msg)
+    if GuildShoppingList_Config.DebugEnabled then
+        print(msg)
+    end
+end
+
+-- Slash command to toggle debug
+SLASH_GSLDEBUG1 = "/gsldebug"
+SlashCmdList["GSLDEBUG"] = function(arg)
+    arg = arg and arg:lower()
+    if arg == "on" then
+        GuildShoppingList_Config.DebugEnabled = true
+        print("|cff00ff00[GSL]|r Debugging enabled.")
+    elseif arg == "off" then
+        GuildShoppingList_Config.DebugEnabled = false
+        print("|cffff0000[GSL]|r Debugging disabled.")
+    else
+        print("|cff00ff00[GSL]|r Debugging is currently " .. (GuildShoppingList_Config.DebugEnabled and "|cffffff00ON|r" or "|cffff0000OFF|r"))
+        print("|cffffff00Usage: /gsldebug on|off|r")
+    end
+end
 -- GuildShoppingList.lua
 local addonName = ...
 local GSL = LibStub("AceAddon-3.0"):NewAddon("GuildShoppingList", "AceComm-3.0", "AceSerializer-3.0")
@@ -117,7 +144,7 @@ end
 
 function PrintCurrentGSLPlayer()
     local gslPlayer = GetGSLPlayer and GetGSLPlayer() or "unknown"
-    print("|cff00ff00[GSL]|r Current GSL player: |cffffff00" .. gslPlayer .. "|r")
+    GSLDebugPrint("|cff00ff00[GSL]|r Current GSL player: |cffffff00" .. gslPlayer .. "|r")
 end
 
 -- Load recipes table for each profession (expand as you add more)
@@ -746,7 +773,7 @@ local function BroadcastReagentData()
     local timestamp = time()
 
     -- Debug print: Show what is being broadcast
-    print("Broadcasting items:", table.concat(savedItems, ", "))
+    GSLDebugPrint("Broadcasting items: " .. table.concat(savedItems, ", "))
 
     -- Serialize tables
     local function serializeTable(tbl)
@@ -1001,24 +1028,18 @@ end)
 
 -- Request a guild roster update on login/reload
 function GSL:OnInitialize()
-    print("|cff00ff00[GSL]|r [DEBUG] GSL:OnInitialize called.")
+    GSLDebugPrint("|cff00ff00[GSL]|r [DEBUG] GSL:OnInitialize called.")
     GuildShoppingList_SavedItems = GuildShoppingList_SavedItems or {}
     items = GuildShoppingList_SavedItems
     GuildShoppingList_ReagentData = GuildShoppingList_ReagentData or {}
 end
 
 function GSL:OnEnable()
-    print("|cff00ff00[GSL]|r [DEBUG] GSL:OnEnable called. Registering AceComm callbacks.")
+    GSLDebugPrint("|cff00ff00[GSL]|r [DEBUG] GSL:OnEnable called. Registering AceComm callbacks.")
     self:RegisterComm("GSLShare")
     self:RegisterComm("GSLRequest")
-    GuildRoster()
-    UpdateList()
-    ScanAndSaveReagents()
-    if GetGSLPlayer() == UnitName("player") then
-        CacheGSLInventory()
-        if GSL and GSL.RequestGSLData then
-            GSL:RequestGSLData()
-        end
+    if self.RegisterMessage then
+        self:RegisterMessage("OnCommReceived")
     end
 end
 
@@ -1432,7 +1453,7 @@ CenterBottomButtons()
 
 -- Register comms on enable
 function GSL:OnEnable()
-    print("|cff00ff00[GSL]|r [DEBUG] GSL:OnEnable called. Registering AceComm callbacks.")
+    GSLDebugPrint("|cff00ff00[GSL]|r [DEBUG] GSL:OnEnable called. Registering AceComm callbacks.")
     self:RegisterComm("GSLShare")
     self:RegisterComm("GSLRequest")
     if self.RegisterMessage then
@@ -1442,7 +1463,7 @@ end
 
 -- RequestGSLData: Ask the guild for the latest GSL data
 function GSL:RequestGSLData()
-    print("|cff00ff00[GSL]|r [DEBUG] Sending Guild Sync request to guild. My timestamp:", GuildShoppingList_GSLDataSyncTimestamp)
+    GSLDebugPrint("|cff00ff00[GSL]|r [DEBUG] Sending Guild Sync request to guild. My timestamp: " .. tostring(GuildShoppingList_GSLDataSyncTimestamp))
     self:SendCommMessage("GSLRequest", tostring(GuildShoppingList_GSLDataSyncTimestamp or 0), "GUILD")
     print("|cff00ff00[GSL]|r Requested latest GuildShoppingList data from guild.")
 end
@@ -1450,14 +1471,14 @@ end
 -- OnCommReceived: Handle incoming data and requests
 function GSL:OnCommReceived(prefix, message, distribution, sender)
     if prefix == "GSLShare" then
-        print("|cff00ff00[GSL]|r [DEBUG] Received GSLShare from " .. (sender or "unknown") .. ". Message: " .. tostring(message))
+        GSLDebugPrint("|cff00ff00[GSL]|r [DEBUG] Received GSLShare from " .. (sender or "unknown") .. ". Message: " .. tostring(message))
         local success, syncData = self:Deserialize(message)
         if success and type(syncData) == "table" then
             local incomingTimestamp = tonumber(syncData.GuildShoppingList_GSLDataSyncTimestamp or 0)
             local localTimestamp = tonumber(GuildShoppingList_GSLDataSyncTimestamp or 0)
-            print("|cff00ff00[GSL]|r [DEBUG] Incoming timestamp: " .. tostring(incomingTimestamp) .. ", Local timestamp: " .. tostring(localTimestamp))
+            GSLDebugPrint("|cff00ff00[GSL]|r [DEBUG] Incoming timestamp: " .. tostring(incomingTimestamp) .. ", Local timestamp: " .. tostring(localTimestamp))
             if incomingTimestamp > localTimestamp then
-                print("|cff00ff00[GSL]|r [DEBUG] Updating local data from " .. (syncData.player or sender))
+                GSLDebugPrint("|cff00ff00[GSL]|r [DEBUG] Updating local data from " .. (syncData.player or sender))
                 GuildShoppingList_SavedItems = syncData.GuildShoppingList_SavedItems or {}
                 GuildShoppingList_GSLBankCache = syncData.GuildShoppingList_GSLBankCache or {}
                 GuildShoppingList_GSLPlayerCache = syncData.GuildShoppingList_GSLPlayerCache or {}
@@ -1467,16 +1488,16 @@ function GSL:OnCommReceived(prefix, message, distribution, sender)
                 if UpdateReagentList then UpdateReagentList() end
                 if UpdateGSLReagentOverlay then UpdateGSLReagentOverlay() end
             else
-                print("|cffffff00[GSL]|r [DEBUG] Received older or same data from " .. (syncData.player or sender) .. "; ignoring.")
+                GSLDebugPrint("|cffffff00[GSL]|r [DEBUG] Received older or same data from " .. (syncData.player or sender) .. "; ignoring.")
             end
         else
-            print("|cffff0000[GSL]|r [DEBUG] Failed to deserialize GSLShare message from " .. (sender or "unknown") .. ".")
+            GSLDebugPrint("|cffff0000[GSL]|r [DEBUG] Failed to deserialize GSLShare message from " .. (sender or "unknown") .. ".")
         end
     elseif prefix == "GSLRequest" then
-        print("|cff00ff00[GSL]|r [DEBUG] Received GSLRequest from " .. (sender or "unknown") .. ". Message: " .. tostring(message))
+        GSLDebugPrint("|cff00ff00[GSL]|r [DEBUG] Received GSLRequest from " .. (sender or "unknown") .. ". Message: " .. tostring(message))
         local requesterTimestamp = tonumber(message or 0)
         local localTimestamp = tonumber(GuildShoppingList_GSLDataSyncTimestamp or 0)
-        print("|cff00ff00[GSL]|r [DEBUG] Requester timestamp: " .. tostring(requesterTimestamp) .. ", Local timestamp: " .. tostring(localTimestamp))
+        GSLDebugPrint("|cff00ff00[GSL]|r [DEBUG] Requester timestamp: " .. tostring(requesterTimestamp) .. ", Local timestamp: " .. tostring(localTimestamp))
         if localTimestamp > requesterTimestamp then
             print("|cff00ff00[GSL]|r [DEBUG] Sending updated data to " .. sender)
             -- Send data to the requester only
