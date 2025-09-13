@@ -1457,6 +1457,7 @@ function GSL:OnCommReceived(prefix, message, distribution, sender)
                 print("|cff00ff00[GSL]|r GuildShoppingList data updated from " .. (syncData.player or sender) .. ". |cffff0000Please /reload your UI to see the updated data.|r")
                 if UpdateList then UpdateList() end
                 if UpdateReagentList then UpdateReagentList() end
+                if UpdateGSLReagentOverlay then UpdateGSLReagentOverlay() end
             else
                 print("|cffffff00[GSL]|r [DEBUG] Received older or same data from " .. (syncData.player or sender) .. "; ignoring.")
             end
