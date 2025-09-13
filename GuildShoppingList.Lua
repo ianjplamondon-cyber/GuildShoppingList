@@ -850,7 +850,7 @@ local function CacheGSLPlayerInventory()
             end
         end
         GuildShoppingList_GSLPlayerCache = inventory
-        print("|cff00ff00[GSL]|r GSLPlayerCache updated for GSL player: " .. playerName)
+        -- print("|cff00ff00[GSL]|r GSLPlayerCache updated for GSL player: " .. playerName)
     end
 end
 
@@ -991,7 +991,7 @@ function CacheGSLInventory()
             end
         end
         GuildShoppingList_GSLInventory = inventory
-        print("|cff00ff00[GSL]|r Inventory cached for GSL player: " .. playerName)
+        -- print("|cff00ff00[GSL]|r Inventory cached for GSL player: " .. playerName)
     end
 end
 
