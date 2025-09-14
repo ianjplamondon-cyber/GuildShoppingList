@@ -1531,6 +1531,9 @@ local bagSyncFrame = CreateFrame("Frame")
 bagSyncFrame:RegisterEvent("BAG_UPDATE")
 bagSyncFrame:SetScript("OnEvent", function(self, event, arg1)
     ScanAndSaveReagents()
+    if GetGSLPlayer and GetGSLPlayer() == UnitName("player") then
+        if CacheGSLInventory then CacheGSLInventory() end
+    end
     if UpdateList then UpdateList() end
     if UpdateReagentList then UpdateReagentList() end
     if UpdateGSLReagentOverlay then UpdateGSLReagentOverlay() end
