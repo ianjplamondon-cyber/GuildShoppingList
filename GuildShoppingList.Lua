@@ -1,8 +1,28 @@
--- Debug configuration
+-- Hook bank cache update to BAG_UPDATE event when bank is open
+local bankEventFrame = CreateFrame("Frame")
+bankEventFrame:RegisterEvent("BANKFRAME_OPENED")
+bankEventFrame:RegisterEvent("BANKFRAME_CLOSED")
+bankEventFrame:RegisterEvent("PLAYERBANKBAGSLOTS_CHANGED")
+local bankIsOpen = false
+
+bankEventFrame:SetScript("OnEvent", function(self, event, ...)
+    if event == "BANKFRAME_OPENED" then
+        bankIsOpen = true
+        self:RegisterEvent("BAG_UPDATE")
+        CacheGSLPlayerBankCache()
+    elseif event == "BANKFRAME_CLOSED" then
+        bankIsOpen = false
+        self:UnregisterEvent("BAG_UPDATE")
+    elseif (event == "PLAYERBANKBAGSLOTS_CHANGED" or event == "BAG_UPDATE") and bankIsOpen then
+        CacheGSLPlayerBankCache()
+    end
+end)
 GuildShoppingList_Config = GuildShoppingList_Config or {}
 if GuildShoppingList_Config.DebugEnabled == nil then
     GuildShoppingList_Config.DebugEnabled = false
 end
+
+
 
 function GSLDebugPrint(msg)
     if GuildShoppingList_Config.DebugEnabled then
@@ -462,29 +482,96 @@ local function EditItemQuantity(index)
 end
 
 function UpdateList()
-    for _, fs in ipairs(listFontStrings) do
-        fs:Hide()
+    for _, fsRow in ipairs(listFontStrings) do
+        for _, fs in ipairs(fsRow) do
+            fs:Hide()
+        end
     end
-    for _, btn in ipairs(editButtons) do
-        btn:Hide()
-    end
-    for _, btn in ipairs(removeButtons) do
-        btn:Hide()
-    end
+    for _, btn in ipairs(editButtons) do btn:Hide() end
+    for _, btn in ipairs(removeButtons) do btn:Hide() end
 
     local yOffset = 0
     local lineHeight = 18
+    -- Header row
+    if not listFontStrings.header then
+        listFontStrings.header = {}
+        listFontStrings.header[1] = listContent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        listFontStrings.header[2] = listContent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        listFontStrings.header[3] = listContent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        listFontStrings.header[4] = listContent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        listFontStrings.header[1]:SetJustifyH("LEFT")
+        for i=2,4 do listFontStrings.header[i]:SetJustifyH("RIGHT") end
+    end
+    local col1, col2, col3, col4 = 10, 270, 350, 430
+    listFontStrings.header[1]:SetPoint("TOPLEFT", listContent, "TOPLEFT", col1, -yOffset - 5)
+    listFontStrings.header[2]:SetPoint("TOPLEFT", listContent, "TOPLEFT", col2, -yOffset - 5)
+    listFontStrings.header[3]:SetPoint("TOPLEFT", listContent, "TOPLEFT", col3, -yOffset - 5)
+    listFontStrings.header[4]:SetPoint("TOPLEFT", listContent, "TOPLEFT", col4, -yOffset - 5)
+    listFontStrings.header[1]:SetText("Item")
+    listFontStrings.header[2]:SetText("You")
+    listFontStrings.header[3]:SetText("GSL")
+    listFontStrings.header[4]:SetText("Needed")
+    for i=1,4 do listFontStrings.header[i]:Show() end
+    yOffset = yOffset + lineHeight
+
+    -- Data rows
     for i, item in ipairs(items) do
-        local fs = listFontStrings[i]
-        if not fs then
-            fs = listContent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-            fs:SetJustifyH("LEFT")
-            listFontStrings[i] = fs
+        listFontStrings[i] = listFontStrings[i] or {}
+        local recipeName, count = item:match("^(.-) x(%d+)$")
+        count = tonumber(count) or 1
+        -- Item name
+        if not listFontStrings[i][1] then
+            listFontStrings[i][1] = listContent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+            listFontStrings[i][1]:SetJustifyH("LEFT")
         end
-        
-        fs:SetPoint("TOPLEFT", listContent, "TOPLEFT", 10, -yOffset - 5)
-        fs:SetText(i .. ". " .. item)
-        fs:Show()
+        -- You
+        if not listFontStrings[i][2] then
+            listFontStrings[i][2] = listContent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+            listFontStrings[i][2]:SetJustifyH("RIGHT")
+        end
+        -- GSL
+        if not listFontStrings[i][3] then
+            listFontStrings[i][3] = listContent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+            listFontStrings[i][3]:SetJustifyH("RIGHT")
+        end
+        -- Needed
+        if not listFontStrings[i][4] then
+            listFontStrings[i][4] = listContent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+            listFontStrings[i][4]:SetJustifyH("RIGHT")
+        end
+
+        local playerName = UnitName("player")
+        local youHave = GuildShoppingList_ReagentData[playerName] and GuildShoppingList_ReagentData[playerName][recipeName] or 0
+        local gslHave = 0
+        local gslPlayer = GetGSLPlayer()
+        -- Always use local cache for player's inventory, and SavedVariables for bank
+        if GuildShoppingList_GSLPlayerCache and GuildShoppingList_GSLPlayerCache[recipeName] then
+            gslHave = gslHave + GuildShoppingList_GSLPlayerCache[recipeName]
+        end
+        if GuildShoppingList_GSLBankCache and GuildShoppingList_GSLBankCache[recipeName] then
+            gslHave = gslHave + GuildShoppingList_GSLBankCache[recipeName]
+        elseif GuildShoppingList_BankCache and GuildShoppingList_BankCache[playerName] and GuildShoppingList_BankCache[playerName][recipeName] then
+            gslHave = gslHave + GuildShoppingList_BankCache[playerName][recipeName]
+        end
+
+        listFontStrings[i][1]:SetPoint("TOPLEFT", listContent, "TOPLEFT", col1, -yOffset - 5)
+        listFontStrings[i][2]:SetPoint("TOPLEFT", listContent, "TOPLEFT", col2, -yOffset - 5)
+        listFontStrings[i][3]:SetPoint("TOPLEFT", listContent, "TOPLEFT", col3, -yOffset - 5)
+        listFontStrings[i][4]:SetPoint("TOPLEFT", listContent, "TOPLEFT", col4, -yOffset - 5)
+
+        listFontStrings[i][1]:SetText(recipeName)
+        listFontStrings[i][2]:SetText(youHave)
+        if gslHave >= count and count > 0 then
+            listFontStrings[i][3]:SetText("|cff00ff00" .. gslHave .. "|r")
+            listFontStrings[i][4]:SetText("|cff00ff00" .. count .. "|r")
+        elseif gslHave < count and count > 0 then
+            listFontStrings[i][3]:SetText("|cffff0000" .. gslHave .. "|r")
+            listFontStrings[i][4]:SetText("|cffff0000" .. count .. "|r")
+        else
+            listFontStrings[i][3]:SetText(gslHave)
+            listFontStrings[i][4]:SetText(count)
+        end
+        for j=1,4 do listFontStrings[i][j]:Show() end
 
         -- Edit button
         local btn = editButtons[i]
@@ -494,7 +581,7 @@ function UpdateList()
             btn:SetText("Edit")
             editButtons[i] = btn
         end
-        btn:SetPoint("LEFT", fs, "RIGHT", 10, 0)
+        btn:SetPoint("LEFT", listFontStrings[i][4], "RIGHT", 10, 0)
         btn:SetScript("OnClick", function() EditItemQuantity(i) end)
         if GetGSLPlayer() == UnitName("player") then
             btn:Show()
@@ -576,7 +663,8 @@ broadcastButton:SetText("Sync GSL Data")
 broadcastButton:SetScript("OnClick", function()
     -- Only allow full sync for the GSL player
     if GetGSLPlayer() == UnitName("player") then
-        CacheGSLInventory()
+        CacheGSLPlayerBagCache()
+    -- Only scan bank when bank is open, not on load
         ScanAndSaveReagents()
         GuildShoppingList_GSLDataSyncTimestamp = time()
         GSL:ShareShoppingList()
@@ -589,7 +677,7 @@ end)
 -- Remove Button
 local removeButton = CreateFrame("Button", nil, frame, "GameMenuButtonTemplate")
 removeButton:SetPoint("LEFT", broadcastButton, "RIGHT", 10, 0)
-removeButton:SetSize(120, 30)
+removeButton:SetSize(90, 22)
 removeButton:SetText("Remove Last")
 removeButton:SetScript("OnClick", function()
     if #items > 0 then
@@ -680,7 +768,7 @@ UpdateGuildSyncButtonVisibility()
 UpdateGSLPlayerText()
 
 -- Utility: Get total count of an item in bags and bank
-local function GetTotalItemCount(itemName)
+function GetTotalItemCount(itemName)
     local total = 0
     local playerName = UnitName("player")
     -- Bags (0-4)
@@ -875,6 +963,8 @@ GuildShoppingList_GSLDataSyncTimestamp = GuildShoppingList_GSLDataSyncTimestamp 
 function GSL:ShareShoppingList()
     -- Only update timestamp if data has changed elsewhere (not here)
     GuildShoppingList_GSLDataSyncTimestamp = GuildShoppingList_GSLDataSyncTimestamp or time()
+    GSLDebugPrint("[GSL] ShareShoppingList: GuildShoppingList_GSLBankCache=" .. (GuildShoppingList_GSLBankCache and tostring(#(GuildShoppingList_GSLBankCache)) or "nil"))
+    for k,v in pairs(GuildShoppingList_GSLBankCache or {}) do GSLDebugPrint("[GSL] BankCache: " .. tostring(k) .. "=" .. tostring(v)) end
     local syncData = {
         player = UnitName("player"),
         GuildShoppingList_SavedItems = GuildShoppingList_SavedItems,
@@ -899,6 +989,7 @@ SlashCmdList["GSLCLEAR"] = function()
     GuildShoppingList_SavedItems = {}
     GuildShoppingList_BankCache = {}
     GuildShoppingList_GSLBankCache = {}
+    print("[GSL DEBUG] GuildShoppingList_GSLBankCache wiped by /gslclear command.")
     GuildShoppingList_GSLPlayerCache = {}
     GuildShoppingList_GSLDataSyncTimestamp = nil
     print("|cffff0000[GSL]|r All GuildShoppingList data has been cleared. |cffff0000Please /reload your UI to fully reset.|r")
@@ -969,11 +1060,11 @@ end
 
 UpdateRemoveButtonVisibility()
 
--- Utility: Scan the GSL player's current inventory and save to SavedVariables
-function CacheGSLInventory()
+-- Utility: Scan the GSL player's bags and bank and update caches
+function CacheGSLPlayerBagCache()
     local playerName = UnitName("player")
     if GetGSLPlayer() == playerName then
-        local inventory = {}
+        local bagCache = {}
         for bag = 0, 4 do
             for slot = 1, C_Container.GetContainerNumSlots(bag) do
                 local itemLink = C_Container.GetContainerItemLink(bag, slot)
@@ -982,16 +1073,50 @@ function CacheGSLInventory()
                     local info = C_Container.GetContainerItemInfo(bag, slot)
                     local itemCount = info and info.stackCount or 0
                     if name then
-                        inventory[name] = (inventory[name] or 0) + itemCount
+                        bagCache[name] = (bagCache[name] or 0) + itemCount
                     end
                 end
             end
         end
-        GuildShoppingList_GSLInventory = inventory
-        -- print("|cff00ff00[GSL]|r Inventory cached for GSL player: " .. playerName)
+        GuildShoppingList_GSLPlayerCache = bagCache
     end
 end
 
+function CacheGSLPlayerBankCache()
+    local playerName = UnitName("player")
+    if GetGSLPlayer() == playerName then
+        local bankCache = {}
+        -- Scan main bank container (bag -1)
+        for slot = 1, C_Container.GetContainerNumSlots(-1) do
+            local itemLink = C_Container.GetContainerItemLink(-1, slot)
+            if itemLink then
+                local name = GetItemInfo(itemLink)
+                local info = C_Container.GetContainerItemInfo(-1, slot)
+                local itemCount = info and info.stackCount or 0
+                if name then
+                    bankCache[name] = (bankCache[name] or 0) + itemCount
+                end
+            end
+        end
+        -- Scan bank bags (5–11)
+        for bag = 5, 11 do
+            for slot = 1, C_Container.GetContainerNumSlots(bag) do
+                local itemLink = C_Container.GetContainerItemLink(bag, slot)
+                if itemLink then
+                    local name = GetItemInfo(itemLink)
+                    local info = C_Container.GetContainerItemInfo(bag, slot)
+                    local itemCount = info and info.stackCount or 0
+                    if name then
+                        bankCache[name] = (bankCache[name] or 0) + itemCount
+                    end
+                end
+            end
+        end
+    GuildShoppingList_GSLBankCache = bankCache
+    if UpdateList then UpdateList() end
+    end
+end
+            
 -- Scan the guild roster and update the cache
 local function ScanGuildForGSLPlayer()
     cachedGSLPlayer = nil
@@ -1009,8 +1134,8 @@ local function ScanGuildForGSLPlayer()
     UpdateGSLControlsVisibility()
     UpdateGuildSyncButtonVisibility() 
     if GetGSLPlayer() == UnitName("player") then
-        CacheGSLPlayerInventory()
-        CacheGSLInventory()
+        CacheGSLPlayerBagCache()
+    -- Only scan bank when bank is open, not on load
     end
 end
 
@@ -1024,11 +1149,14 @@ gslGuildFrame:SetScript("OnEvent", function(self, event)
 end)
 
 -- Request a guild roster update on login/reload
+
 function GSL:OnInitialize()
     GSLDebugPrint("|cff00ff00[GSL]|r [DEBUG] GSL:OnInitialize called.")
     GuildShoppingList_SavedItems = GuildShoppingList_SavedItems or {}
     items = GuildShoppingList_SavedItems
     GuildShoppingList_ReagentData = GuildShoppingList_ReagentData or {}
+    -- Do NOT overwrite GuildShoppingList_GSLBankCache on reload or initialization
+    GSLDebugPrint("[GSL] SV cache loaded at OnInitialize, keys: " .. tostring(next(GuildShoppingList_GSLBankCache)))
 end
 
 function GSL:OnEnable()
@@ -1502,6 +1630,9 @@ function GSL:OnCommReceived(prefix, message, distribution, sender)
                 GSLDebugPrint("|cff00ff00[GSL]|r [DEBUG] Updating local data from " .. (syncData.player or sender))
                 GuildShoppingList_SavedItems = syncData.GuildShoppingList_SavedItems or {}
                 GuildShoppingList_GSLBankCache = syncData.GuildShoppingList_GSLBankCache or {}
+                print("[GSL DEBUG] GuildShoppingList_GSLBankCache updated by OnCommReceived (sync). Keys: " .. tostring(next(GuildShoppingList_GSLBankCache)))
+                GSLDebugPrint("[GSL] OnCommReceived: GuildShoppingList_GSLBankCache=" .. (GuildShoppingList_GSLBankCache and tostring(#(GuildShoppingList_GSLBankCache)) or "nil"))
+                for k,v in pairs(GuildShoppingList_GSLBankCache or {}) do GSLDebugPrint("[GSL] BankCache: " .. tostring(k) .. "=" .. tostring(v)) end
                 GuildShoppingList_GSLPlayerCache = syncData.GuildShoppingList_GSLPlayerCache or {}
                 GuildShoppingList_GSLDataSyncTimestamp = incomingTimestamp
                 print("|cff00ff00[GSL]|r GuildShoppingList data updated from " .. (syncData.player or sender) .. ". |cffff0000Please /reload your UI to see the updated data.|r")
@@ -1553,21 +1684,21 @@ bagSyncFrame:RegisterEvent("BAG_UPDATE")
 bagSyncFrame:SetScript("OnEvent", function(self, event, arg1)
     ScanAndSaveReagents()
     if GetGSLPlayer and GetGSLPlayer() == UnitName("player") then
-        if CacheGSLInventory then CacheGSLInventory() end
+        if CacheGSLPlayerBagCache then CacheGSLPlayerBagCache() end
     end
     if UpdateList then UpdateList() end
     if UpdateReagentList then UpdateReagentList() end
     if UpdateGSLReagentOverlay then UpdateGSLReagentOverlay() end
-    -- Optional: print a debug message
-    -- print("|cff00ff00[GSL]|r Data auto-synced due to bag change.")
 end)
 
--- Update UI and overlay when the bank is opened or closed
 local bankSyncFrame = CreateFrame("Frame")
 bankSyncFrame:RegisterEvent("BANKFRAME_OPENED")
 bankSyncFrame:RegisterEvent("BANKFRAME_CLOSED")
 bankSyncFrame:SetScript("OnEvent", function(self, event)
     ScanAndSaveReagents()
+    if event == "BANKFRAME_OPENED" and GetGSLPlayer and GetGSLPlayer() == UnitName("player") then
+    -- Only scan bank when bank is open, not on load
+    end
     if UpdateList then UpdateList() end
     if UpdateReagentList then UpdateReagentList() end
     if UpdateGSLReagentOverlay then UpdateGSLReagentOverlay() end
