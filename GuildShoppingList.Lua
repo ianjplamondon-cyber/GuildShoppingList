@@ -29,7 +29,6 @@ end
 local addonName = ...
 local GSL = LibStub("AceAddon-3.0"):NewAddon("GuildShoppingList", "AceComm-3.0", "AceSerializer-3.0")
 
--- Minimap Button using LibDBIcon and LibDataBroker
 local LDB = LibStub("LibDataBroker-1.1"):NewDataObject("GuildShoppingList", {
     type = "launcher",
     text = "Guild Shopping List",
@@ -38,6 +37,7 @@ local LDB = LibStub("LibDataBroker-1.1"):NewDataObject("GuildShoppingList", {
         if button == "LeftButton" then
             if GuildShoppingListFrame:IsShown() then
                 GuildShoppingListFrame:Hide()
+-- Utility: Normalize names for robust matching
             else
                 GuildShoppingListFrame:Show()
             end
@@ -734,7 +734,6 @@ end
 -- Utility: Scan your own reagents and save to SavedVariables
 function ScanAndSaveReagents()
     local reagentCounts = {}
-    -- Aggregate all reagents from the current shopping list
     local reagentTotals = {}
     for _, item in ipairs(items) do
         local recipeName, count = item:match("^(.-) x(%d+)$")
@@ -743,17 +742,15 @@ function ScanAndSaveReagents()
             if recipes[recipeName] then
                 for _, reagent in ipairs(recipes[recipeName].reagents or {}) do
                     if reagent.name then
-                        reagentTotals[reagent.name] = true
+                        reagentTotals[reagent.name] = (reagentTotals[reagent.name] or 0) + (reagent.count or 1) * count
                     end
                 end
             end
         end
     end
-    -- Scan bags/bank for each reagent
     for reagentName in pairs(reagentTotals) do
         reagentCounts[reagentName] = GetTotalItemCount(reagentName)
     end
-    -- Save to SavedVariables under player name
     local playerName = UnitName("player")
     GuildShoppingList_ReagentData[playerName] = reagentCounts
 end
@@ -1111,19 +1108,22 @@ end
 frame:Hide()
 
 function UpdateReagentList()
-        for _, fsRow in ipairs(reagentFontStrings) do
+    for _, fsRow in ipairs(reagentFontStrings) do
         for _, fs in ipairs(fsRow) do
             fs:Hide()
         end
     end
 
-    -- Aggregate reagents needed
     local reagentTotals = {}
+    GSLDebugPrint("UpdateReagentList: items count=" .. tostring(#items))
     for _, item in ipairs(items) do
+        GSLDebugPrint("UpdateReagentList: item=" .. tostring(item))
         local recipeName, count = item:match("^(.-) x(%d+)$")
         count = tonumber(count) or 1
+        local found = false
         for prof, recipes in pairs(RecipeData) do
             if recipes[recipeName] then
+                found = true
                 for _, reagent in ipairs(recipes[recipeName].reagents or {}) do
                     if reagent.name then
                         reagentTotals[reagent.name] = (reagentTotals[reagent.name] or 0) + (reagent.count or 1) * count
@@ -1131,7 +1131,16 @@ function UpdateReagentList()
                 end
             end
         end
+        if not found then
+            GSLDebugPrint("UpdateReagentList: No match for recipe '" .. recipeName .. "'")
+        end
     end
+    local function tableCount(tbl)
+        local c = 0
+        for _ in pairs(tbl) do c = c + 1 end
+        return c
+    end
+    GSLDebugPrint("UpdateReagentList: reagentTotals count=" .. tostring(tableCount(reagentTotals)))
 
     local playerName = UnitName("player")
     local yOffset = 0
@@ -1247,13 +1256,16 @@ function UpdateGSLReagentOverlay()
         end
     end
 
-    -- Aggregate reagents needed (reuse your logic)
     local reagentTotals = {}
+    GSLDebugPrint("UpdateGSLReagentOverlay: items count=" .. tostring(#items))
     for _, item in ipairs(items) do
+        GSLDebugPrint("UpdateGSLReagentOverlay: item=" .. tostring(item))
         local recipeName, count = item:match("^(.-) x(%d+)$")
         count = tonumber(count) or 1
+        local found = false
         for prof, recipes in pairs(RecipeData) do
             if recipes[recipeName] then
+                found = true
                 for _, reagent in ipairs(recipes[recipeName].reagents or {}) do
                     if reagent.name then
                         reagentTotals[reagent.name] = (reagentTotals[reagent.name] or 0) + (reagent.count or 1) * count
@@ -1261,7 +1273,16 @@ function UpdateGSLReagentOverlay()
                 end
             end
         end
+        if not found then
+            GSLDebugPrint("UpdateGSLReagentOverlay: No match for recipe '" .. recipeName .. "'")
+        end
     end
+    local function tableCount(tbl)
+        local c = 0
+        for _ in pairs(tbl) do c = c + 1 end
+        return c
+    end
+    GSLDebugPrint("UpdateGSLReagentOverlay: reagentTotals count=" .. tostring(tableCount(reagentTotals)))
 
     local playerName = UnitName("player")
     local yOffset = 0

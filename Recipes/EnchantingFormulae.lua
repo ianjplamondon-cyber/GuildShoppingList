@@ -15,7 +15,7 @@ GuildShoppingList_EnchantingFormulae  = {
     ["Enchanted Leather"] = { spellId = 0, reagents = { { name = "Rugged Leather", count = 1 }, { name = "Greater Eternal Essence", count = 3 } } },
     ["Fiery Weapon"] = { spellId = 0, reagents = { { name = "Essence of Fire", count = 1 }, { name = "Large Brilliant Shard", count = 4 } } },
     ["Fire Power"] = { spellId = 0, reagents = { { name = "Essence of Fire", count = 4 }, { name = "Large Brilliant Shard", count = 10 } } },
-    ["Fishing (enchant)"] = { spellId = 0, reagents = { { name = "Light Illusion Dust", count = 2 }, { name = "Blackmouth Oil", count = 3 } } },
+    ["Fishing (enchant)"] = { spellId = 0, reagents = { { name can you make changes to my code for me in this workspace= "Light Illusion Dust", count = 2 }, { name = "Blackmouth Oil", count = 3 } } },
     ["Frost Power"] = { spellId = 0, reagents = { { name = "Essence of Water", count = 4 }, { name = "Large Brilliant Shard", count = 10 } } },
     ["Greater Agility (boots enchant)"] = { spellId = 0, reagents = { { name = "Greater Eternal Essence", count = 4 }, { name = "Wildvine", count = 2 } } },
     ["Greater Agility (gloves enchant)"] = { spellId = 0, reagents = { { name = "Rich Illusion Dust", count = 3 }, { name = "Greater Eternal Essence", count = 3 } } },
