@@ -593,7 +593,7 @@ function UpdateList()
         local rbtn = removeButtons[i]
         if not rbtn then
             rbtn = CreateFrame("Button", nil, listContent, "UIPanelButtonTemplate")
-            rbtn:SetSize(20, 20)
+            rbtn:SetSize(14, 14) -- Smaller size to prevent overlap
             rbtn.icon = rbtn:CreateTexture(nil, "ARTWORK")
             rbtn.icon:SetAllPoints()
             removeButtons[i] = rbtn
@@ -1248,13 +1248,23 @@ function UpdateReagentList()
         GSLDebugPrint("UpdateReagentList: item=" .. tostring(item))
         local recipeName, count = item:match("^(.-) x(%d+)$")
         count = tonumber(count) or 1
+        local gslHave = 0
+        if GuildShoppingList_GSLBankCache and GuildShoppingList_GSLBankCache[recipeName] then
+            gslHave = gslHave + GuildShoppingList_GSLBankCache[recipeName]
+        end
+        if GuildShoppingList_GSLPlayerCache and GuildShoppingList_GSLPlayerCache[recipeName] then
+            gslHave = gslHave + GuildShoppingList_GSLPlayerCache[recipeName]
+        end
+        local missing = math.max(count - gslHave, 0)
         local found = false
-        for prof, recipes in pairs(RecipeData) do
-            if recipes[recipeName] then
-                found = true
-                for _, reagent in ipairs(recipes[recipeName].reagents or {}) do
-                    if reagent.name then
-                        reagentTotals[reagent.name] = (reagentTotals[reagent.name] or 0) + (reagent.count or 1) * count
+        if missing > 0 then
+            for prof, recipes in pairs(RecipeData) do
+                if recipes[recipeName] then
+                    found = true
+                    for _, reagent in ipairs(recipes[recipeName].reagents or {}) do
+                        if reagent.name then
+                            reagentTotals[reagent.name] = (reagentTotals[reagent.name] or 0) + (reagent.count or 1) * missing
+                        end
                     end
                 end
             end

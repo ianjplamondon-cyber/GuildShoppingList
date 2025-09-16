@@ -28,7 +28,7 @@ GuildShoppingList_AlchemyRecipes  = {
     --["Flask of Mighty Restoration"] = { spellId = 0, reagents = { { name = "Fel Lotus", count = 1 }, { name = "Mana Thistle", count = 3 }, { name = "Dreaming Glory", count = 7 }, { name = "Crystal Vial", count = 1 } } },
     --["Flask of Pure Death"] = { spellId = 0, reagents = { { name = "Fel Lotus", count = 1 }, { name = "Mana Thistle", count = 3 }, { name = "Nightmare Vine", count = 7 }, { name = "Crystal Vial", count = 1 } } },
     --["Flask of Relentless Assault"] = { spellId = 0, reagents = { { name = "Fel Lotus", count = 1 }, { name = "Mana Thistle", count = 3 }, { name = "Terocone", count = 7 }, { name = "Crystal Vial", count = 1 } } },
-    ["Free Action Potion"] = { spellId = 0, reagents = { { name = "Blackmouth Oil", count = 2 }, { name = "Stranglekelp", count = 1 }, { name = "Crystal Vial", count = 1 } } },
+    ["Free Action Potion"] = { spellId = 0, reagents = { { name = "Blackmouth Oil", count = 2 }, { name = "Stranglekelp", count = 1 }, { name = "Leaded Vial", count = 1 } } },
     ["Frost Oil"] = { spellId = 0, reagents = { { name = "Dragon's Teeth", count = 1 }, { name = "Khadgar's Whisker", count = 1 }, { name = "Crystal Vial", count = 1 } } },
     ["Frost Protection Potion"] = { spellId = 0, reagents = { { name = "Dragon's Teeth", count = 1 }, { name = "Goldthorn", count = 1 }, { name = "Crystal Vial", count = 1 } } },
     ["Goblin Rocket Fuel"] = { spellId = 0, reagents = { { name = "Firebloom", count = 1 }, { name = "Volatile Rum", count = 1 }, { name = "Crystal Vial", count = 1 } } },
