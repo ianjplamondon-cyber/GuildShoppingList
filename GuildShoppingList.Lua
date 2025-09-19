@@ -877,15 +877,6 @@ end)
 
 -- Request a guild roster update on login/reload
 
-function GSL:OnInitialize()
-    GSLDebugPrint("|cff00ff00[GSL]|r [DEBUG] GSL:OnInitialize called.")
-    GuildShoppingList_SavedItems = GuildShoppingList_SavedItems or {}
-    items = GuildShoppingList_SavedItems
-    GuildShoppingList_ReagentData = GuildShoppingList_ReagentData or {}
-    -- Do NOT overwrite GuildShoppingList_GSLBankCache on reload or initialization
-    GSLDebugPrint("[GSL] SV cache loaded at OnInitialize, keys: " .. tostring(next(GuildShoppingList_GSLBankCache)))
-end
-
 function GSL:OnEnable()
     GSLDebugPrint("|cff00ff00[GSL]|r [DEBUG] GSL:OnEnable called. Registering AceComm callbacks.")
     self:RegisterComm("GSLShare")

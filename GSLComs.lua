@@ -1,3 +1,5 @@
+VC = LibStub("VersionCheck-1.0", true)
+
 -- Broadcast your reagent data to the guild
 local function BroadcastReagentData()
     local gslPlayer = GetGSLPlayer()
