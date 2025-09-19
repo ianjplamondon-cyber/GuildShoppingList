@@ -1724,3 +1724,107 @@ bankSyncFrame:SetScript("OnEvent", function(self, event)
     if UpdateReagentList then UpdateReagentList() end
     if UpdateGSLReagentOverlay then UpdateGSLReagentOverlay() end
 end)
+-- Set Date Range Button
+
+local setDateRangeButton = CreateFrame("Button", nil, frame, "GameMenuButtonTemplate")
+setDateRangeButton:SetSize(120, 30)
+setDateRangeButton:SetText("Set Date Range")
+setDateRangeButton:SetPoint("BOTTOM", frame, "BOTTOM", 0, 80)
+
+-- Date dropdowns and calendar icons
+local dateRangeFrame = CreateFrame("Frame", nil, frame)
+dateRangeFrame:SetSize(320, 40)
+dateRangeFrame:SetPoint("TOP", setDateRangeButton, "BOTTOM", -20, 3)
+dateRangeFrame:Hide()
+
+
+local function CreateDateDropdown(parent, labelText, defaultDate, onDateSelected)
+    local dropdown = CreateFrame("Frame", nil, parent, "UIDropDownMenuTemplate")
+    UIDropDownMenu_SetWidth(dropdown, 100)
+    UIDropDownMenu_SetText(dropdown, defaultDate or "YYYY-MM-DD")
+    dropdown:SetPoint("LEFT", parent, "LEFT", 0, 0)
+
+    local label = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    label:SetPoint("RIGHT", dropdown, "LEFT", -4, 2)
+    label:SetText(labelText)
+
+    -- Populate dropdown with dates for current and previous month
+    local page = 1
+    local maxPerPage = 10
+    local function populate(self, level)
+        if not level then return end
+        local today = date("*t")
+        local months = { today.month, today.month == 1 and 12 or today.month - 1 }
+        local years = { today.year, today.month == 1 and today.year - 1 or today.year }
+        local dateList = {}
+        for mi, month in ipairs(months) do
+            local year = years[mi]
+            for day = 1, 31 do
+                local valid = true
+                if month == 2 and day > 28 then valid = false end
+                if month == 4 or month == 6 or month == 9 or month == 11 then if day > 30 then valid = false end end
+                if valid then
+                    table.insert(dateList, {year=year, month=month, day=day})
+                end
+            end
+        end
+        table.sort(dateList, function(a, b)
+            if a.year ~= b.year then return a.year < b.year end
+            if a.month ~= b.month then return a.month < b.month end
+            return a.day < b.day
+        end)
+        local totalPages = math.ceil(#dateList / maxPerPage)
+        local startIdx = (page - 1) * maxPerPage + 1
+        local endIdx = math.min(page * maxPerPage, #dateList)
+        if page > 1 then
+            local prevInfo = UIDropDownMenu_CreateInfo()
+            prevInfo.text = "|cff00ff00Previous...|r"
+            prevInfo.func = function()
+                page = page - 1
+                ToggleDropDownMenu(nil, nil, dropdown)
+            end
+            UIDropDownMenu_AddButton(prevInfo)
+        end
+        for i = startIdx, endIdx do
+            local d = dateList[i]
+            local dateStr = string.format("%04d-%02d-%02d", d.year, d.month, d.day)
+            local info = UIDropDownMenu_CreateInfo()
+            info.text = dateStr
+            info.func = function()
+                UIDropDownMenu_SetText(dropdown, dateStr)
+                if onDateSelected then onDateSelected(dateStr) end
+            end
+            UIDropDownMenu_AddButton(info)
+        end
+        if page < totalPages then
+            local nextInfo = UIDropDownMenu_CreateInfo()
+            nextInfo.text = "|cff00ff00Next...|r"
+            nextInfo.func = function()
+                page = page + 1
+                ToggleDropDownMenu(nil, nil, dropdown)
+            end
+            UIDropDownMenu_AddButton(nextInfo)
+        end
+    end
+    dropdown.initialize = populate
+
+    return dropdown
+end
+
+local startDropdown = CreateDateDropdown(dateRangeFrame, "Start Date:", "YYYY-MM-DD", function(date)
+    GuildShoppingList_GatherStartDate = date
+end)
+startDropdown:SetPoint("LEFT", dateRangeFrame, "LEFT", 10, 0)
+
+local endDropdown = CreateDateDropdown(dateRangeFrame, "End Date:", "YYYY-MM-DD", function(date)
+    GuildShoppingList_GatherEndDate = date
+end)
+endDropdown:SetPoint("LEFT", startDropdown, "RIGHT", 120, 0)
+
+setDateRangeButton:SetScript("OnClick", function()
+    if dateRangeFrame:IsShown() then
+        dateRangeFrame:Hide()
+    else
+        dateRangeFrame:Show()
+    end
+end)
