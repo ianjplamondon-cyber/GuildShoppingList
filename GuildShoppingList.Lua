@@ -515,6 +515,12 @@ function UpdateList()
     yOffset = yOffset + lineHeight
 
     -- Data rows
+    -- Sort items alphabetically by recipe name
+    table.sort(items, function(a, b)
+        local aName = a:match("^(.-) x%d+$") or a
+        local bName = b:match("^(.-) x%d+$") or b
+        return aName:lower() < bName:lower()
+    end)
     for i, item in ipairs(items) do
         listFontStrings[i] = listFontStrings[i] or {}
         local recipeName, count = item:match("^(.-) x(%d+)$")
@@ -1308,7 +1314,12 @@ function UpdateReagentList()
 
     -- Data rows
     local i = 1
-    for reagent, total in pairs(reagentTotals) do
+    -- Sort reagents alphabetically
+    local sortedReagents = {}
+    for reagent in pairs(reagentTotals) do table.insert(sortedReagents, reagent) end
+    table.sort(sortedReagents, function(a, b) return a:lower() < b:lower() end)
+    for _, reagent in ipairs(sortedReagents) do
+        local total = reagentTotals[reagent]
         reagentFontStrings[i] = reagentFontStrings[i] or {}
         -- Reagent name
         if not reagentFontStrings[i][1] then
