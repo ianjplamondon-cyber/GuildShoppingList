@@ -1735,17 +1735,36 @@ setDateRangeButton:SetText("Set Date Range")
 setDateRangeButton:SetPoint("BOTTOM", frame, "BOTTOM", 0, 80)
 
 -- Date dropdowns and calendar icons
+-- Function to update dropdowns from SV
+local function UpdateDateDropdownsFromSV()
+    local svTable = _G["GuildShoppingList_Config"]
+    local startDate = (svTable and svTable.GatherStartDate) or "YYYY-MM-DD"
+    local endDate = (svTable and svTable.GatherEndDate) or "YYYY-MM-DD"
+    if startDropdown then UIDropDownMenu_SetText(startDropdown, startDate) end
+    if endDropdown then UIDropDownMenu_SetText(endDropdown, endDate) end
+end
+
 local dateRangeFrame = CreateFrame("Frame", nil, frame)
 dateRangeFrame:SetSize(320, 40)
 dateRangeFrame:SetPoint("TOP", setDateRangeButton, "BOTTOM", -20, 3)
 dateRangeFrame:Hide()
 
+-- Read SV date range on load
+local initialStartDate = (GuildShoppingList_Config and GuildShoppingList_Config.GatherStartDate) or "YYYY-MM-DD"
+local initialEndDate = (GuildShoppingList_Config and GuildShoppingList_Config.GatherEndDate) or "YYYY-MM-DD"
 
 local function CreateDateDropdown(parent, labelText, defaultDate, onDateSelected)
     local dropdown = CreateFrame("Frame", nil, parent, "UIDropDownMenuTemplate")
     UIDropDownMenu_SetWidth(dropdown, 100)
     UIDropDownMenu_SetText(dropdown, defaultDate or "YYYY-MM-DD")
     dropdown:SetPoint("LEFT", parent, "LEFT", 0, 0)
+
+    -- Ensure dropdown text is restored after menu closes
+    dropdown:SetScript("OnHide", function()
+        local svTable = _G["GuildShoppingList_Config"]
+        local svValue = (labelText == "Start Date:") and (svTable and svTable.GatherStartDate) or (svTable and svTable.GatherEndDate)
+        UIDropDownMenu_SetText(dropdown, svValue or "YYYY-MM-DD")
+    end)
 
     local label = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     label:SetPoint("RIGHT", dropdown, "LEFT", -4, 2)
@@ -1795,7 +1814,16 @@ local function CreateDateDropdown(parent, labelText, defaultDate, onDateSelected
             info.text = dateStr
             info.func = function()
                 UIDropDownMenu_SetText(dropdown, dateStr)
+                -- Write to SV immediately and update dropdown text
+                local svTable = _G["GuildShoppingList_Config"] or {}
+                if labelText == "Start Date:" then
+                    svTable.GatherStartDate = dateStr
+                else
+                    svTable.GatherEndDate = dateStr
+                end
+                _G["GuildShoppingList_Config"] = svTable
                 if onDateSelected then onDateSelected(dateStr) end
+                UIDropDownMenu_SetText(dropdown, dateStr)
             end
             UIDropDownMenu_AddButton(info)
         end
@@ -1814,20 +1842,36 @@ local function CreateDateDropdown(parent, labelText, defaultDate, onDateSelected
     return dropdown
 end
 
-local startDropdown = CreateDateDropdown(dateRangeFrame, "Start Date:", "YYYY-MM-DD", function(date)
-    GuildShoppingList_GatherStartDate = date
-end)
-startDropdown:SetPoint("LEFT", dateRangeFrame, "LEFT", 10, 0)
+local startDropdown, endDropdown
 
-local endDropdown = CreateDateDropdown(dateRangeFrame, "End Date:", "YYYY-MM-DD", function(date)
-    GuildShoppingList_GatherEndDate = date
-end)
-endDropdown:SetPoint("LEFT", startDropdown, "RIGHT", 120, 0)
+local function CreateOrUpdateDateDropdowns()
+    if startDropdown then startDropdown:Hide(); startDropdown = nil end
+    if endDropdown then endDropdown:Hide(); endDropdown = nil end
+    local svTable = _G["GuildShoppingList_Config"]
+    local startDate = (svTable and svTable.GatherStartDate) or "YYYY-MM-DD"
+    local endDate = (svTable and svTable.GatherEndDate) or "YYYY-MM-DD"
+    startDropdown = CreateDateDropdown(dateRangeFrame, "Start Date:", startDate, function(date)
+        GuildShoppingList_GatherStartDate = date
+        _G["GuildShoppingList_Config"] = _G["GuildShoppingList_Config"] or {}
+        _G["GuildShoppingList_Config"].GatherStartDate = date
+    end)
+    startDropdown:SetPoint("LEFT", dateRangeFrame, "LEFT", 10, 0)
+    endDropdown = CreateDateDropdown(dateRangeFrame, "End Date:", endDate, function(date)
+        GuildShoppingList_GatherEndDate = date
+        _G["GuildShoppingList_Config"] = _G["GuildShoppingList_Config"] or {}
+        _G["GuildShoppingList_Config"].GatherEndDate = date
+    end)
+    endDropdown:SetPoint("LEFT", startDropdown, "RIGHT", 120, 0)
+end
 
 setDateRangeButton:SetScript("OnClick", function()
     if dateRangeFrame:IsShown() then
         dateRangeFrame:Hide()
     else
         dateRangeFrame:Show()
+        CreateOrUpdateDateDropdowns()
     end
 end)
+
+-- Update dropdowns when main frame is shown
+GuildShoppingListFrame:HookScript("OnShow", CreateOrUpdateDateDropdowns)
