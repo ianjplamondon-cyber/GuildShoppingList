@@ -61,6 +61,13 @@ function VC:Enable(hostAddon)
         VCPrint("Received message on prefix: " .. tostring(prefix) .. " from " .. tostring(sender))
         VC:OnCommReceived(prefix, message, distribution, sender)
     end)
+
+    -- Always trigger version check and debug print
+    self:TriggerVersionCheck()
+    VCPrint("[VC] Automatic version check triggered on startup/reload.")
+
+end
+
 function VC:TriggerVersionCheck()
     local myVersion = (VC.hostAddon and VC.hostAddon.Version) or "unknown"
     VCPrint("TriggerVersionCheck called. My version: " .. tostring(myVersion))
@@ -68,7 +75,6 @@ function VC:TriggerVersionCheck()
     VC.VersionCheckActive = true
     if VC.VersionCheckTimer then VC.VersionCheckTimer:Cancel() end
     VC:SendVersionCheck(myVersion)
-end
 end
 
 function VC:CompareVersion(ver1, ver2)
@@ -123,17 +129,40 @@ function VC:OnCommReceived(prefix, message, distribution, sender)
                 VC.VersionCheckTimer = C_Timer.NewTimer(2, function()
                     VC.VersionCheckActive = false
                     local highestSender, highestVersion = nil, nil
+                    local lowestSender, lowestVersion = nil, nil
                     for s, v in pairs(VC.VersionResponses) do
                         if not highestVersion or VC:CompareVersion(v, highestVersion) > 0 then
                             highestSender, highestVersion = s, v
                         end
+                        if not lowestVersion or VC:CompareVersion(v, lowestVersion) < 0 then
+                            lowestSender, lowestVersion = s, v
+                        end
                     end
                     if highestSender and highestVersion then
                         print("[VersionCheck] Highest version in guild: " .. tostring(highestVersion) .. " (" .. tostring(highestSender) .. ")")
+                        -- Show popup if any version is lower than mine
+                        local myVersion = (VC.hostAddon and VC.hostAddon.Version) or "unknown"
+                        if lowestVersion and VC:CompareVersion(lowestVersion, myVersion) < 0 then
+                            VC:ShowUpdatePopup(lowestSender, lowestVersion, myVersion)
+                        end
                     else
                         print("[VersionCheck] No version responses received.")
                     end
                 end)
+
+-- Popup function
+function VC:ShowUpdatePopup(sender, oldVersion, myVersion)
+    local addonName = (VC.hostAddon and VC.hostAddon:GetName()) or "This addon"
+    local message = addonName .. " may be out of date!\nGuild member '" .. tostring(sender) .. "' is using version " .. tostring(oldVersion) .. ".\nPlease update to " .. tostring(myVersion) .. " through CurseForge."
+    StaticPopupDialogs["VC_UPDATE_WARNING"] = {
+        text = message,
+        button1 = "OK",
+        timeout = 0,
+        whileDead = true,
+        hideOnEscape = true,
+    }
+    StaticPopup_Show("VC_UPDATE_WARNING")
+end
             end
         else
             if _G.VC_DebugEnabled then

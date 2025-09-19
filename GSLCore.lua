@@ -158,9 +158,6 @@ function GSL:OnEnable()
             VC:Enable(GSL)
             print("[GSL] Called VC:Enable(GSL)")
         end
-        if VC and VC.TriggerVersionCheck then
-            VC:TriggerVersionCheck()
-        end
     end
 end
 
