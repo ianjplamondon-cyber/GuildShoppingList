@@ -1,3 +1,34 @@
+-- Slash command registration for debugging (must be top-level)
+SLASH_VCD1 = "/vcd"
+SLASH_VCDON1 = "/vcdon"
+SLASH_VCDOFF1 = "/vcdoff"
+
+SlashCmdList["VCD"] = function()
+    VC_DebugEnabled = not VC_DebugEnabled
+    GuildShoppingList_Config = GuildShoppingList_Config or {}
+    GuildShoppingList_Config.VCDebugEnabled = VC_DebugEnabled
+    print("[VersionCheck] Debugging " .. (VC_DebugEnabled and "enabled" or "disabled"))
+end
+SlashCmdList["VCDON"] = function()
+    VC_DebugEnabled = true
+    GuildShoppingList_Config = GuildShoppingList_Config or {}
+    GuildShoppingList_Config.VCDebugEnabled = true
+    print("[VersionCheck] Debugging enabled")
+end
+SlashCmdList["VCDOFF"] = function()
+    VC_DebugEnabled = false
+    GuildShoppingList_Config = GuildShoppingList_Config or {}
+    GuildShoppingList_Config.VCDebugEnabled = false
+    print("[VersionCheck] Debugging disabled")
+end
+-- Debug control
+VC_DebugEnabled = VC_DebugEnabled or false
+
+local function VCPrint(msg)
+    if VC_DebugEnabled then
+        print("[VersionCheck] " .. tostring(msg))
+    end
+end
 -- VersionCheck-1.0.lua
 -- Standalone library for WoW Classic addon version checking via AceComm-3.0
 -- Usage: local VC = LibStub("VersionCheck-1.0")
@@ -18,11 +49,18 @@ local AceSerializer = LibStub("AceSerializer-3.0")
 -- Host addon must call this once after loading
 function VC:Enable(hostAddon)
     self.hostAddon = hostAddon
+    local hostName = "unknown"
+    if hostAddon and hostAddon.GetName then
+        hostName = hostAddon:GetName()
+    end
+    VCPrint("Enable called for hostAddon: " .. tostring(hostName))
     AceComm:RegisterComm(self.PREFIX, function(prefix, message, distribution, sender)
+        VCPrint("Received message on prefix: " .. tostring(prefix) .. " from " .. tostring(sender))
         VC:OnCommReceived(prefix, message, distribution, sender)
     end)
 function VC:TriggerVersionCheck()
     local myVersion = (VC.hostAddon and VC.hostAddon.Version) or "unknown"
+    VCPrint("TriggerVersionCheck called. My version: " .. tostring(myVersion))
     VC:SendVersionCheck(myVersion)
 end
 end
@@ -44,22 +82,48 @@ end
 
 function VC:SendVersionCheck(version)
     local serialized = AceSerializer:Serialize(version)
+    VCPrint("Sending version check to GUILD. Version: " .. tostring(version))
     AceComm:SendCommMessage(VC.PREFIX, serialized, "GUILD")
 end
 
 
 function VC:OnCommReceived(prefix, message, distribution, sender)
     if prefix == VC.PREFIX then
+        VCPrint("OnCommReceived: VCHECK from " .. tostring(sender) .. " via " .. tostring(distribution))
         local success, version = AceSerializer:Deserialize(message)
         if success then
+            VCPrint("Deserialized version from " .. tostring(sender) .. ": " .. tostring(version))
             local myVersion = (VC.hostAddon and VC.hostAddon.Version) or "unknown"
             local response = AceSerializer:Serialize(myVersion)
+            VCPrint("Sending VCRESP to recipient: '" .. tostring(sender) .. "' with version " .. tostring(myVersion))
             AceComm:SendCommMessage(VC.RESPONSE_PREFIX, response, "WHISPER", sender)
+        else
+            VCPrint("Failed to deserialize version from " .. tostring(sender))
         end
     elseif prefix == VC.RESPONSE_PREFIX then
+        VCPrint("OnCommReceived: VCRESP from " .. tostring(sender) .. " via " .. tostring(distribution))
         local success, version = AceSerializer:Deserialize(message)
         if success then
-            print("[VersionCheck] " .. sender .. " is using version: " .. tostring(version))
+            VCPrint(sender .. " is using version: " .. tostring(version))
+        else
+            VCPrint("Failed to deserialize response from " .. tostring(sender))
         end
     end
+-- Slash command registration for debugging
+SLASH_VCD1 = "/vcd"
+SLASH_VCDON1 = "/vcdon"
+SLASH_VCDOFF1 = "/vcdoff"
+
+SlashCmdList["VCD"] = function()
+    VC_DebugEnabled = not VC_DebugEnabled
+    print("[VersionCheck] Debugging " .. (VC_DebugEnabled and "enabled" or "disabled"))
+end
+SlashCmdList["VCDON"] = function()
+    VC_DebugEnabled = true
+    print("[VersionCheck] Debugging enabled")
+end
+SlashCmdList["VCDOFF"] = function()
+    VC_DebugEnabled = false
+    print("[VersionCheck] Debugging disabled")
+end
 end

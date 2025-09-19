@@ -3,6 +3,7 @@
 
 addonName = ...
 GSL = LibStub("AceAddon-3.0"):NewAddon("GuildShoppingList", "AceComm-3.0", "AceSerializer-3.0")
+VC = LibStub("VersionCheck-1.0", true)
 
 -- SavedVariables Initialization
 GuildShoppingList_Config = GuildShoppingList_Config or {}
@@ -129,17 +130,20 @@ function GSL:ShareShoppingList()
     print("|cff00ff00[GSL]|r Shared GuildShoppingList data to guild. Timestamp: " .. tostring(GuildShoppingList_GSLDataSyncTimestamp))
 end
 
-function GSL:OnInitialize()
-    GSLDebugPrint("|cff00ff00[GSL]|r [DEBUG] GSL:OnInitialize called.")
-    GuildShoppingList_SavedItems = GuildShoppingList_SavedItems or {}
-    items = GuildShoppingList_SavedItems
-    GuildShoppingList_ReagentData = GuildShoppingList_ReagentData or {}
-end
-
 function GSL:OnEnable()
     GSLDebugPrint("|cff00ff00[GSL]|r [DEBUG] GSL:OnEnable called. Registering AceComm callbacks.")
     self:RegisterComm("GSLShare")
     self:RegisterComm("GSLRequest")
+    if LibStub and LibStub("VersionCheck-1.0", true) then
+        local VC = LibStub("VersionCheck-1.0")
+        if VC and VC.Enable then
+            VC:Enable(GSL)
+            print("[GSL] Called VC:Enable(GSL)")
+        end
+        if VC and VC.TriggerVersionCheck then
+            VC:TriggerVersionCheck()
+        end
+    end
 end
 
 -- Populate RecipeData from global recipe tables after all recipe files are loaded
@@ -151,12 +155,5 @@ RecipeData["Leatherworking"] = GuildShoppingList_LeatherworkingPatterns or {}
 RecipeData["Tailoring"] = GuildShoppingList_TailoringPatterns or {}
 RecipeData["Cooking"] = GuildShoppingList_CookingRecipes or {}
 RecipeData["Enchanting"] = GuildShoppingList_EnchantingFormulae or {}
-
--- Debug print to confirm RecipeData population
-for prof, recipes in pairs(RecipeData) do
-    local keys = {}
-    for k in pairs(recipes) do table.insert(keys, k) end
-    print("[GSLCore] Loaded RecipeData[" .. prof .. "]: " .. tostring(#keys) .. " keys: " .. table.concat(keys, ", "))
-end
 
 return GSL

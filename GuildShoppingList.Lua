@@ -20,6 +20,10 @@ bankEventFrame:SetScript("OnEvent", function(self, event, ...)
     end
 end)
 GuildShoppingList_Config = GuildShoppingList_Config or {}
+if GuildShoppingList_Config.VCDebugEnabled == nil then
+    GuildShoppingList_Config.VCDebugEnabled = false
+end
+VC_DebugEnabled = GuildShoppingList_Config.VCDebugEnabled
 if GuildShoppingList_Config.DebugEnabled == nil then
     GuildShoppingList_Config.DebugEnabled = false
 end
@@ -947,15 +951,15 @@ function UpdateReagentList()
     end
 
     local reagentTotals = {}
-    GSLDebugPrint("UpdateReagentList: items count=" .. tostring(#items))
+    -- GSLDebugPrint("UpdateReagentList: items count=" .. tostring(#items))
     -- Debug print RecipeData keys
     for prof, recipes in pairs(RecipeData) do
         local keys = {}
         for k in pairs(recipes) do table.insert(keys, k) end
-        GSLDebugPrint("RecipeData[" .. prof .. "] keys: " .. table.concat(keys, ", "))
+        -- GSLDebugPrint("RecipeData[" .. prof .. "] keys: " .. table.concat(keys, ", "))
     end
     for _, item in ipairs(items) do
-        GSLDebugPrint("UpdateReagentList: item=" .. tostring(item))
+        -- GSLDebugPrint("UpdateReagentList: item=" .. tostring(item))
         local recipeName, count = item:match("^(.-) x(%d+)$")
         count = tonumber(count) or 1
         -- Normalize recipeName (trim spaces)
@@ -995,7 +999,7 @@ function UpdateReagentList()
             end
         end
         if not found then
-            GSLDebugPrint("UpdateReagentList: No match for recipe '" .. recipeName .. "'")
+            -- GSLDebugPrint("UpdateReagentList: No match for recipe '" .. recipeName .. "'")
         end
     end
     local function tableCount(tbl)
@@ -1003,7 +1007,7 @@ function UpdateReagentList()
         for _ in pairs(tbl) do c = c + 1 end
         return c
     end
-    GSLDebugPrint("UpdateReagentList: reagentTotals count=" .. tostring(tableCount(reagentTotals)))
+    -- GSLDebugPrint("UpdateReagentList: reagentTotals count=" .. tostring(tableCount(reagentTotals)))
 
     local playerName = UnitName("player")
     local yOffset = 0
@@ -1108,15 +1112,15 @@ function UpdateGSLReagentOverlay()
     end
 
     local reagentTotals = {}
-    GSLDebugPrint("UpdateGSLReagentOverlay: items count=" .. tostring(#items))
+    -- GSLDebugPrint("UpdateGSLReagentOverlay: items count=" .. tostring(#items))
     -- Debug print RecipeData keys
     for prof, recipes in pairs(RecipeData) do
         local keys = {}
         for k in pairs(recipes) do table.insert(keys, k) end
-        GSLDebugPrint("RecipeData[" .. prof .. "] keys: " .. table.concat(keys, ", "))
+        -- GSLDebugPrint("RecipeData[" .. prof .. "] keys: " .. table.concat(keys, ", "))
     end
     for _, item in ipairs(items) do
-        GSLDebugPrint("UpdateGSLReagentOverlay: item=" .. tostring(item))
+        -- GSLDebugPrint("UpdateGSLReagentOverlay: item=" .. tostring(item))
         local recipeName, count = item:match("^(.-) x(%d+)$")
         count = tonumber(count) or 1
         -- Normalize recipeName (trim spaces)
@@ -1146,7 +1150,7 @@ function UpdateGSLReagentOverlay()
             end
         end
         if not found then
-            GSLDebugPrint("UpdateGSLReagentOverlay: No match for recipe '" .. recipeName .. "'")
+            -- GSLDebugPrint("UpdateGSLReagentOverlay: No match for recipe '" .. recipeName .. "'")
         end
     end
     local function tableCount(tbl)
@@ -1154,7 +1158,7 @@ function UpdateGSLReagentOverlay()
         for _ in pairs(tbl) do c = c + 1 end
         return c
     end
-    GSLDebugPrint("UpdateGSLReagentOverlay: reagentTotals count=" .. tostring(tableCount(reagentTotals)))
+    -- GSLDebugPrint("UpdateGSLReagentOverlay: reagentTotals count=" .. tostring(tableCount(reagentTotals)))
 
     local playerName = UnitName("player")
     local yOffset = 0
