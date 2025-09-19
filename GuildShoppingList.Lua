@@ -1674,10 +1674,13 @@ function GSL:OnCommReceived(prefix, message, distribution, sender)
                 for k,v in pairs(GuildShoppingList_GSLBankCache or {}) do GSLDebugPrint("[GSL] BankCache: " .. tostring(k) .. "=" .. tostring(v)) end
                 GuildShoppingList_GSLPlayerCache = syncData.GuildShoppingList_GSLPlayerCache or {}
                 GuildShoppingList_GSLDataSyncTimestamp = incomingTimestamp
-                -- Sync date range to SV for non-GSL players
+                -- Sync date range to SV and cache for non-GSL players
                 _G["GuildShoppingList_Config"] = _G["GuildShoppingList_Config"] or {}
                 _G["GuildShoppingList_Config"].GatherStartDate = syncData.GatherStartDate or "YYYY-MM-DD"
                 _G["GuildShoppingList_Config"].GatherEndDate = syncData.GatherEndDate or "YYYY-MM-DD"
+                GuildShoppingList_GatherStartDate = syncData.GatherStartDate or "YYYY-MM-DD"
+                GuildShoppingList_GatherEndDate = syncData.GatherEndDate or "YYYY-MM-DD"
+                if UpdateGSLPlayerText then UpdateGSLPlayerText() end
                 print("|cff00ff00[GSL]|r GuildShoppingList data updated from " .. (syncData.player or sender) .. ". |cffff0000Please /reload your UI to see the updated data.|r")
                 if UpdateList then UpdateList() end
                 if UpdateReagentList then UpdateReagentList() end
