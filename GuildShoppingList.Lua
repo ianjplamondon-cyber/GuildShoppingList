@@ -223,6 +223,7 @@ frame.title:SetPoint("CENTER", frame.TitleBg, "CENTER", 0, 0)
 frame.title:SetText("Guild Shopping List")
 frame.gslPlayerText = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 frame.gslPlayerText:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -20, -35)
+frame.gslPlayerText:SetJustifyH("RIGHT")
 frame.gslPlayerText:SetText("")
 
 -- Tooltip for GSL player text
@@ -240,7 +241,9 @@ local function UpdateGSLPlayerText()
     local playerName = UnitName("player")
     local gslPlayer = GetGSLPlayer and GetGSLPlayer() or "unknown"
     if gslPlayer ~= playerName then
-        frame.gslPlayerText:SetText("Current GSL player: |cffffff00" .. gslPlayer .. "|r")
+        local startDate = GuildShoppingList_GatherStartDate or "YYYY-MM-DD"
+        local endDate = GuildShoppingList_GatherEndDate or "YYYY-MM-DD"
+        frame.gslPlayerText:SetText("Current GSL player: |cffffff00" .. gslPlayer .. "|r" .. "\nDate Range: " .. startDate .. " to " .. endDate)
         frame.gslPlayerText:Show()
     else
         frame.gslPlayerText:SetText("")
