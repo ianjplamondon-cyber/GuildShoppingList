@@ -241,8 +241,9 @@ local function UpdateGSLPlayerText()
     local playerName = UnitName("player")
     local gslPlayer = GetGSLPlayer and GetGSLPlayer() or "unknown"
     if gslPlayer ~= playerName then
-        local startDate = GuildShoppingList_GatherStartDate or "YYYY-MM-DD"
-        local endDate = GuildShoppingList_GatherEndDate or "YYYY-MM-DD"
+        local svTable = _G["GuildShoppingList_Config"]
+        local startDate = (svTable and svTable.GatherStartDate) or "YYYY-MM-DD"
+        local endDate = (svTable and svTable.GatherEndDate) or "YYYY-MM-DD"
         frame.gslPlayerText:SetText("Current GSL player: |cffffff00" .. gslPlayer .. "|r" .. "\nDate Range: " .. startDate .. " to " .. endDate)
         frame.gslPlayerText:Show()
     else
@@ -974,13 +975,21 @@ function GSL:ShareShoppingList()
     GuildShoppingList_GSLDataSyncTimestamp = GuildShoppingList_GSLDataSyncTimestamp or time()
     GSLDebugPrint("[GSL] ShareShoppingList: GuildShoppingList_GSLBankCache=" .. (GuildShoppingList_GSLBankCache and tostring(#(GuildShoppingList_GSLBankCache)) or "nil"))
     for k,v in pairs(GuildShoppingList_GSLBankCache or {}) do GSLDebugPrint("[GSL] BankCache: " .. tostring(k) .. "=" .. tostring(v)) end
+    local svTable = _G["GuildShoppingList_Config"] or {}
+    local cacheStart = GuildShoppingList_GatherStartDate
+    local cacheEnd = GuildShoppingList_GatherEndDate
+    local svStart = svTable.GatherStartDate or "YYYY-MM-DD"
+    local svEnd = svTable.GatherEndDate or "YYYY-MM-DD"
+    local useStart = (cacheStart and cacheStart ~= svStart) and cacheStart or svStart
+    local useEnd = (cacheEnd and cacheEnd ~= svEnd) and cacheEnd or svEnd
     local syncData = {
         player = UnitName("player"),
         GuildShoppingList_SavedItems = GuildShoppingList_SavedItems,
         GuildShoppingList_GSLBankCache = GuildShoppingList_GSLBankCache,
         GuildShoppingList_GSLPlayerCache = GuildShoppingList_GSLPlayerCache,
         GuildShoppingList_GSLDataSyncTimestamp = GuildShoppingList_GSLDataSyncTimestamp,
-        -- add more variables here if you want to sync them
+        GatherStartDate = useStart,
+        GatherEndDate = useEnd,
     }
     local serialized = self:Serialize(syncData)
     self:SendCommMessage("GSLShare", serialized, "GUILD")
@@ -1647,6 +1656,12 @@ function GSL:OnCommReceived(prefix, message, distribution, sender)
         GSLDebugPrint("|cff00ff00[GSL]|r [DEBUG] Received GSLShare from " .. (sender or "unknown") .. ". Message: " .. tostring(message))
         local success, syncData = self:Deserialize(message)
         if success and type(syncData) == "table" then
+            GSLDebugPrint("[GSL DEBUG] Received syncData table:")
+            for k, v in pairs(syncData) do
+                GSLDebugPrint("  " .. tostring(k) .. " = " .. tostring(v))
+            end
+            GSLDebugPrint("[GSL DEBUG] GatherStartDate: " .. tostring(syncData.GatherStartDate))
+            GSLDebugPrint("[GSL DEBUG] GatherEndDate: " .. tostring(syncData.GatherEndDate))
             local incomingTimestamp = tonumber(syncData.GuildShoppingList_GSLDataSyncTimestamp or 0)
             local localTimestamp = tonumber(GuildShoppingList_GSLDataSyncTimestamp or 0)
             GSLDebugPrint("|cff00ff00[GSL]|r [DEBUG] Incoming timestamp: " .. tostring(incomingTimestamp) .. ", Local timestamp: " .. tostring(localTimestamp))
@@ -1659,6 +1674,10 @@ function GSL:OnCommReceived(prefix, message, distribution, sender)
                 for k,v in pairs(GuildShoppingList_GSLBankCache or {}) do GSLDebugPrint("[GSL] BankCache: " .. tostring(k) .. "=" .. tostring(v)) end
                 GuildShoppingList_GSLPlayerCache = syncData.GuildShoppingList_GSLPlayerCache or {}
                 GuildShoppingList_GSLDataSyncTimestamp = incomingTimestamp
+                -- Sync date range to SV for non-GSL players
+                _G["GuildShoppingList_Config"] = _G["GuildShoppingList_Config"] or {}
+                _G["GuildShoppingList_Config"].GatherStartDate = syncData.GatherStartDate or "YYYY-MM-DD"
+                _G["GuildShoppingList_Config"].GatherEndDate = syncData.GatherEndDate or "YYYY-MM-DD"
                 print("|cff00ff00[GSL]|r GuildShoppingList data updated from " .. (syncData.player or sender) .. ". |cffff0000Please /reload your UI to see the updated data.|r")
                 if UpdateList then UpdateList() end
                 if UpdateReagentList then UpdateReagentList() end
@@ -1677,12 +1696,15 @@ function GSL:OnCommReceived(prefix, message, distribution, sender)
         if localTimestamp > requesterTimestamp then
             print("|cff00ff00[GSL]|r [DEBUG] Sending updated data to " .. sender)
             -- Send data to the requester only
+            local svTable = _G["GuildShoppingList_Config"] or {}
             local syncData = {
                 player = UnitName("player"),
                 GuildShoppingList_SavedItems = GuildShoppingList_SavedItems,
                 GuildShoppingList_GSLBankCache = GuildShoppingList_GSLBankCache,
                 GuildShoppingList_GSLPlayerCache = GuildShoppingList_GSLPlayerCache,
                 GuildShoppingList_GSLDataSyncTimestamp = localTimestamp,
+                GatherStartDate = svTable.GatherStartDate or "YYYY-MM-DD",
+                GatherEndDate = svTable.GatherEndDate or "YYYY-MM-DD",
             }
             local serialized = self:Serialize(syncData)
             self:SendCommMessage("GSLShare", serialized, "WHISPER", sender)
@@ -1854,12 +1876,18 @@ local function CreateOrUpdateDateDropdowns()
         GuildShoppingList_GatherStartDate = date
         _G["GuildShoppingList_Config"] = _G["GuildShoppingList_Config"] or {}
         _G["GuildShoppingList_Config"].GatherStartDate = date
+        if GetGSLPlayer and GetGSLPlayer() == UnitName("player") and GSL and GSL.RequestGSLData then
+            GSL:RequestGSLData()
+        end
     end)
     startDropdown:SetPoint("LEFT", dateRangeFrame, "LEFT", 10, 0)
     endDropdown = CreateDateDropdown(dateRangeFrame, "End Date:", endDate, function(date)
         GuildShoppingList_GatherEndDate = date
         _G["GuildShoppingList_Config"] = _G["GuildShoppingList_Config"] or {}
         _G["GuildShoppingList_Config"].GatherEndDate = date
+        if GetGSLPlayer and GetGSLPlayer() == UnitName("player") and GSL and GSL.RequestGSLData then
+            GSL:RequestGSLData()
+        end
     end)
     endDropdown:SetPoint("LEFT", startDropdown, "RIGHT", 120, 0)
 end
