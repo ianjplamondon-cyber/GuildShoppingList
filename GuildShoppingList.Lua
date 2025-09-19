@@ -1,3 +1,5 @@
+local addonName = ...
+
 -- Hook bank cache update to BAG_UPDATE event when bank is open
 local bankEventFrame = CreateFrame("Frame")
 bankEventFrame:RegisterEvent("BANKFRAME_OPENED")
@@ -22,32 +24,14 @@ if GuildShoppingList_Config.DebugEnabled == nil then
     GuildShoppingList_Config.DebugEnabled = false
 end
 
-
-
 function GSLDebugPrint(msg)
     if GuildShoppingList_Config.DebugEnabled then
         print(msg)
     end
 end
 
--- Slash command to toggle debug
-SLASH_GSLDEBUG1 = "/gsldebug"
-SlashCmdList["GSLDEBUG"] = function(arg)
-    arg = arg and arg:lower()
-    if arg == "on" then
-        GuildShoppingList_Config.DebugEnabled = true
-        print("|cff00ff00[GSL]|r Debugging enabled.")
-    elseif arg == "off" then
-        GuildShoppingList_Config.DebugEnabled = false
-        print("|cffff0000[GSL]|r Debugging disabled.")
-    else
-        print("|cff00ff00[GSL]|r Debugging is currently " .. (GuildShoppingList_Config.DebugEnabled and "|cffffff00ON|r" or "|cffff0000OFF|r"))
-        print("|cffffff00Usage: /gsldebug on|off|r")
-    end
-end
 -- GuildShoppingList.lua
 local addonName = ...
-local GSL = LibStub("AceAddon-3.0"):NewAddon("GuildShoppingList", "AceComm-3.0", "AceSerializer-3.0")
 
 local LDB = LibStub("LibDataBroker-1.1"):NewDataObject("GuildShoppingList", {
     type = "launcher",
@@ -57,7 +41,6 @@ local LDB = LibStub("LibDataBroker-1.1"):NewDataObject("GuildShoppingList", {
         if button == "LeftButton" then
             if GuildShoppingListFrame:IsShown() then
                 GuildShoppingListFrame:Hide()
--- Utility: Normalize names for robust matching
             else
                 GuildShoppingListFrame:Show()
             end
@@ -150,69 +133,6 @@ overlayScrollFrame:SetScript("OnMouseWheel", function(self, delta)
     end
 end)
 
--- Utility: Find the designated GSL player in the guild
-function GetGSLPlayer()
-    local function TruncateRealm(name)
-        return name and name:match("^[^%-]+") or name
-    end
-
-    if GuildShoppingList_ForcedGSLPlayer and GuildShoppingList_ForcedGSLPlayer ~= "" then
-        return TruncateRealm(GuildShoppingList_ForcedGSLPlayer)
-    end
-    return TruncateRealm(cachedGSLPlayer)
-end
-
-function PrintCurrentGSLPlayer()
-    local gslPlayer = GetGSLPlayer and GetGSLPlayer() or "unknown"
-    GSLDebugPrint("|cff00ff00[GSL]|r Current GSL player: |cffffff00" .. gslPlayer .. "|r")
-end
-
--- Load recipes table for each profession (expand as you add more)
-local RecipeData = {}
-local professionList = { "Alchemy", "Blacksmithing", "Enchanting", "Engineering", "Leatherworking", "Tailoring", "Cooking" }
-
-if GuildShoppingList_AlchemyRecipes then
-    RecipeData["Alchemy"] = GuildShoppingList_AlchemyRecipes
-else
-    RecipeData["Alchemy"] = {}
-end
-
-if GuildShoppingList_EngineeringSchematics then
-    RecipeData["Engineering"] = GuildShoppingList_EngineeringSchematics
-else
-    RecipeData["Engineering"] = {}
-end
-
-if GuildShoppingList_BlacksmithingPlans then
-    RecipeData["Blacksmithing"] = GuildShoppingList_BlacksmithingPlans
-else
-    RecipeData["Blacksmithing"] = {}
-end
-
-if GuildShoppingList_LeatherworkingPatterns then
-    RecipeData["Leatherworking"] = GuildShoppingList_LeatherworkingPatterns
-else
-    RecipeData["Leatherworking"] = {}
-end
-
-if GuildShoppingList_TailoringPatterns then
-    RecipeData["Tailoring"] = GuildShoppingList_TailoringPatterns
-else
-    RecipeData["Tailoring"] = {}
-end
-
-if GuildShoppingList_CookingRecipes then
-    RecipeData["Cooking"] = GuildShoppingList_CookingRecipes
-else
-    RecipeData["Cooking"] = {}
-end
-
-if GuildShoppingList_EnchantingFormulae then
-    RecipeData["Enchanting"] = GuildShoppingList_EnchantingFormulae
-else
-    RecipeData["Enchanting"] = {}
-end
-
 -- Expand the width and center the title
 local frame = CreateFrame("Frame", "GuildShoppingListFrame", UIParent, "BasicFrameTemplateWithInset")
 frame:SetSize(600, 598)
@@ -262,7 +182,7 @@ frame:SetScript("OnDragStop", function(self) self:StopMovingOrSizing() end)
 -- Persistent shopping list table
 GuildShoppingList_SavedItems = GuildShoppingList_SavedItems or {}
 
-items = GuildShoppingList_SavedItems  -- no 'local'
+items = GuildShoppingList_SavedItems  
 
 -- Profession Dropdown
 local selectedProfession = "Alchemy"
@@ -496,8 +416,7 @@ function UpdateList()
 
     local yOffset = 0
     local lineHeight = 18
-    -- Header row
-    if not listFontStrings.header then
+        if not listFontStrings.header then
         listFontStrings.header = {}
         listFontStrings.header[1] = listContent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
         listFontStrings.header[2] = listContent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
@@ -518,8 +437,6 @@ function UpdateList()
     for i=1,4 do listFontStrings.header[i]:Show() end
     yOffset = yOffset + lineHeight
 
-    -- Data rows
-    -- Sort items alphabetically by recipe name
     table.sort(items, function(a, b)
         local aName = a:match("^(.-) x%d+$") or a
         local bName = b:match("^(.-) x%d+$") or b
@@ -780,131 +697,6 @@ UpdateGSLControlsVisibility()
 UpdateGuildSyncButtonVisibility()
 UpdateGSLPlayerText()
 
--- Utility: Get total count of an item in bags and bank
-function GetTotalItemCount(itemName)
-    local total = 0
-    local playerName = UnitName("player")
-    -- Bags (0-4)
-    for bag = 0, 4 do
-        for slot = 1, C_Container.GetContainerNumSlots(bag) do
-            local itemLink = C_Container.GetContainerItemLink(bag, slot)
-            if itemLink then
-                local name = GetItemInfo(itemLink)
-                if name == itemName then
-                    local info = C_Container.GetContainerItemInfo(bag, slot)
-                    local itemCount = info and info.stackCount or 0
-                    total = total + itemCount
-                end
-            end
-        end
-    end
-    -- Bank: live scan if open, otherwise use cache
-    if BankFrame and BankFrame:IsShown() then
-        -- Main bank slots (bank bag -1)
-        for slot = 1, C_Container.GetContainerNumSlots(-1) do
-            local itemLink = C_Container.GetContainerItemLink(-1, slot)
-            if itemLink then
-                local name = GetItemInfo(itemLink)
-                if name == itemName then
-                    local info = C_Container.GetContainerItemInfo(-1, slot)
-                    local itemCount = info and info.stackCount or 0
-                    total = total + itemCount
-                end
-            end
-        end
-        -- Bank bags (5-11)
-        for bag = 5, 11 do
-            for slot = 1, C_Container.GetContainerNumSlots(bag) do
-                local itemLink = C_Container.GetContainerItemLink(bag, slot)
-                if itemLink then
-                    local name = GetItemInfo(itemLink)
-                    if name == itemName then
-                        local info = C_Container.GetContainerItemInfo(bag, slot)
-                        local itemCount = info and info.stackCount or 0
-                        total = total + itemCount
-                    end
-                end
-            end
-        end
-    elseif GuildShoppingList_BankCache and GuildShoppingList_BankCache[playerName] and GuildShoppingList_BankCache[playerName][itemName] then
-        total = total + GuildShoppingList_BankCache[playerName][itemName]
-    end
-    return total
-end
-
--- Utility: Scan your own reagents and save to SavedVariables
-function ScanAndSaveReagents()
-    local reagentCounts = {}
-    local reagentTotals = {}
-    for _, item in ipairs(items) do
-        local recipeName, count = item:match("^(.-) x(%d+)$")
-        count = tonumber(count) or 1
-        for prof, recipes in pairs(RecipeData) do
-            if recipes[recipeName] then
-                for _, reagent in ipairs(recipes[recipeName].reagents or {}) do
-                    if reagent.name then
-                        reagentTotals[reagent.name] = (reagentTotals[reagent.name] or 0) + (reagent.count or 1) * count
-                    end
-                end
-            end
-        end
-    end
-    for reagentName in pairs(reagentTotals) do
-        reagentCounts[reagentName] = GetTotalItemCount(reagentName)
-    end
-    local playerName = UnitName("player")
-    GuildShoppingList_ReagentData[playerName] = reagentCounts
-end
-
--- Broadcast your reagent data to the guild
-local function BroadcastReagentData()
-    local gslPlayer = GetGSLPlayer()
-    local playerName = UnitName("player")
-    if gslPlayer ~= playerName then
-        print("|cffff0000[GSL]|r Only the GSL player can broadcast reagent data.")
-        return
-    end
-
-    -- Prepare data for sync
-    local lastReagentData = GuildShoppingList_GSLLastReagentData and GuildShoppingList_GSLLastReagentData[gslPlayer] or {}
-    local savedItems = GuildShoppingList_SavedItems or {}
-    local timestamp = time()
-
-    -- Debug print: Show what is being broadcast
-    GSLDebugPrint("Broadcasting items: " .. table.concat(savedItems, ", "))
-
-    -- Serialize tables
-    local function serializeTable(tbl)
-        local parts = {}
-        for k, v in pairs(tbl) do
-            table.insert(parts, tostring(k) .. "=" .. tostring(v))
-        end
-        return table.concat(parts, ";")
-    end
-
-    local reagentDataStr = serializeTable(lastReagentData)
-    local savedItemsStr = table.concat(savedItems, "||")
-    local msg = "GSL_SYNC:" ..
-        "reagents=" .. reagentDataStr ..
-        "||items=" .. savedItemsStr ..
-        "||timestamp=" .. tostring(timestamp) ..
-        "||gslplayer=" .. gslPlayer
-
-    -- Always use the classic API
-    SendAddonMessage(GSL_COMM_PREFIX, msg, "GUILD", "")
-
-    GuildShoppingList_GSLLastReagentTimestamp = GuildShoppingList_GSLLastReagentTimestamp or {}
-    GuildShoppingList_GSLLastReagentTimestamp[gslPlayer] = timestamp
-    print("|cff00ff00[GSL]|r GSL data (reagents and shopping list) shared to guild.")
-end
-
--- Communication prefix for sharing
-local GSL_COMM_PREFIX = "GSL_SHARE"
-
-if RegisterAddonMessagePrefix then
-    RegisterAddonMessagePrefix(GSL_COMM_PREFIX)
-end
-
 -- Serialize a table to a string (simple key-value pairs)
 local function serializeTable(tbl)
     local parts = {}
@@ -928,40 +720,6 @@ end
 
 -- Initialize the new SavedVariable
 GuildShoppingList_GSLPlayerCache = GuildShoppingList_GSLPlayerCache or {}
-
--- Function to cache the current inventory for the GSL player
-local function CacheGSLPlayerInventory()
-    local playerName = UnitName("player")
-    if GetGSLPlayer and GetGSLPlayer() == playerName then
-        local inventory = {}
-        for bag = 0, 4 do
-            for slot = 1, C_Container.GetContainerNumSlots(bag) do
-                local itemLink = C_Container.GetContainerItemLink(bag, slot)
-                if itemLink then
-                    local name = GetItemInfo(itemLink)
-                    local info = C_Container.GetContainerItemInfo(bag, slot)
-                    local itemCount = info and info.stackCount or 0
-                    if name then
-                        inventory[name] = (inventory[name] or 0) + itemCount
-                    end
-                end
-            end
-        end
-        GuildShoppingList_GSLPlayerCache = inventory
-        -- print("|cff00ff00[GSL]|r GSLPlayerCache updated for GSL player: " .. playerName)
-    end
-end
-
--- Call CacheGSLPlayerInventory on login/reload for the GSL player
-local initFrameGSLPlayerCache = CreateFrame("Frame")
-initFrameGSLPlayerCache:RegisterEvent("ADDON_LOADED")
-initFrameGSLPlayerCache:SetScript("OnEvent", function(self, event, arg1)
-    if arg1 == addonName then
-        if GetGSLPlayer and GetGSLPlayer() == UnitName("player") then
-            CacheGSLPlayerInventory()
-        end
-    end
-end)
 
 -- List of SavedVariables to sync (exclude GuildShoppingList_BankCache)
 local GSL_SYNC_VARS = {
@@ -999,38 +757,6 @@ function GSL:ShareShoppingList()
     print("|cff00ff00[GSL]|r Shared GuildShoppingList data (explicit variables) to guild. Timestamp: " .. tostring(GuildShoppingList_GSLDataSyncTimestamp))
 end
 
--- Slash command for /gslshare (AceComm-based sync)
-SLASH_GSLSHARE1 = "/gslshare"
-SlashCmdList["GSLSHARE"] = function()
-    GSL:ShareShoppingList()
-end
-
-SLASH_GSLCLEAR1 = "/gslclear"
-SlashCmdList["GSLCLEAR"] = function()
-    GuildShoppingList_SavedItems = {}
-    GuildShoppingList_BankCache = {}
-    GuildShoppingList_GSLBankCache = {}
-    print("[GSL DEBUG] GuildShoppingList_GSLBankCache wiped by /gslclear command.")
-    GuildShoppingList_GSLPlayerCache = {}
-    GuildShoppingList_GSLDataSyncTimestamp = nil
-    print("|cffff0000[GSL]|r All GuildShoppingList data has been cleared. |cffff0000Please /reload your UI to fully reset.|r")
-    if UpdateList then UpdateList() end
-    if UpdateReagentList then UpdateReagentList() end
-end
-
-SLASH_GSLHELP1 = "/gslhelp"
-SlashCmdList["GSLHELP"] = function()
-    print("|cff00ff00GuildShoppingList Commands:|r")
-    print("|cffffff00/gsl|r - Toggle the main Guild Shopping List window.")
-    print("|cffffff00/gsl share|r - Save your current reagent data for offline viewing (does not broadcast).")
-    print("|cffffff00/gsl who|r - Print the current GSL player for your guild.")
-    print("|cffffff00/gslreagents|r - Toggle the GSL Reagent Tracker overlay window.")
-    print("|cffffff00/gslshare|r - Broadcast your Guild Shopping List data to the guild (GSL player only).")
-    print("|cffffff00/gslrequest|r - Request the latest Guild Shopping List data from the guild (non-GSL players).")
-    print("|cffffff00/gslclear|r - Clear all Guild Shopping List data (irreversible, use with caution).")
-    print("|cffffff00/gslhelp|r - Show this help message.")
-end
-
 -- Hide the Remove Last button if not the GSL player
 local function UpdateRemoveButtonVisibility()
     local playerName = UnitName("player")
@@ -1043,8 +769,6 @@ end
 
 -- Call this on load and whenever GSL player might change
 UpdateRemoveButtonVisibility()
-
--- Optionally, hook it to tab switching or other events if needed
 
 -- Reagent List Border and ScrollFrame (hidden by default)
 local reagentBorder = CreateFrame("Frame", nil, frame, "BackdropTemplate")
@@ -1080,28 +804,6 @@ local function UpdateRemoveButtonVisibility()
 end
 
 UpdateRemoveButtonVisibility()
-
--- Utility: Scan the GSL player's bags and bank and update caches
-function CacheGSLPlayerBagCache()
-    local playerName = UnitName("player")
-    if GetGSLPlayer() == playerName then
-        local bagCache = {}
-        for bag = 0, 4 do
-            for slot = 1, C_Container.GetContainerNumSlots(bag) do
-                local itemLink = C_Container.GetContainerItemLink(bag, slot)
-                if itemLink then
-                    local name = GetItemInfo(itemLink)
-                    local info = C_Container.GetContainerItemInfo(bag, slot)
-                    local itemCount = info and info.stackCount or 0
-                    if name then
-                        bagCache[name] = (bagCache[name] or 0) + itemCount
-                    end
-                end
-            end
-        end
-        GuildShoppingList_GSLPlayerCache = bagCache
-    end
-end
 
 function CacheGSLPlayerBankCache()
     local playerName = UnitName("player")
@@ -1235,25 +937,6 @@ listScrollFrame:Show()
 reagentBorder:Hide()
 reagentScrollFrame:Hide()
 
--- Slash command to show/hide
-SLASH_GUILDSHOPPINGLIST1 = "/gsl"
-SlashCmdList["GUILDSHOPPINGLIST"] = function(msg)
-    msg = msg and msg:lower() or ""
-    if msg == "share" then
-        -- Only update local data, do not broadcast
-        ScanAndSaveReagents()
-        print("|cff00ff00[GSL]|r Data saved for offline viewing.")
-    elseif msg == "who" then
-        PrintCurrentGSLPlayer()
-    else
-        if frame:IsShown() then
-            frame:Hide()
-        else
-            frame:Show()
-        end
-    end
-end
-
 frame:Hide()
 
 function UpdateReagentList()
@@ -1265,10 +948,18 @@ function UpdateReagentList()
 
     local reagentTotals = {}
     GSLDebugPrint("UpdateReagentList: items count=" .. tostring(#items))
+    -- Debug print RecipeData keys
+    for prof, recipes in pairs(RecipeData) do
+        local keys = {}
+        for k in pairs(recipes) do table.insert(keys, k) end
+        GSLDebugPrint("RecipeData[" .. prof .. "] keys: " .. table.concat(keys, ", "))
+    end
     for _, item in ipairs(items) do
         GSLDebugPrint("UpdateReagentList: item=" .. tostring(item))
         local recipeName, count = item:match("^(.-) x(%d+)$")
         count = tonumber(count) or 1
+        -- Normalize recipeName (trim spaces)
+        recipeName = recipeName and recipeName:match("^%s*(.-)%s*$") or recipeName
         local gslHave = 0
         if GuildShoppingList_GSLBankCache and GuildShoppingList_GSLBankCache[recipeName] then
             gslHave = gslHave + GuildShoppingList_GSLBankCache[recipeName]
@@ -1280,11 +971,24 @@ function UpdateReagentList()
         local found = false
         if missing > 0 then
             for prof, recipes in pairs(RecipeData) do
+                -- Try direct match, then lowercase match
                 if recipes[recipeName] then
                     found = true
                     for _, reagent in ipairs(recipes[recipeName].reagents or {}) do
                         if reagent.name then
                             reagentTotals[reagent.name] = (reagentTotals[reagent.name] or 0) + (reagent.count or 1) * missing
+                        end
+                    end
+                else
+                    for k, v in pairs(recipes) do
+                        if k:lower() == recipeName:lower() then
+                            found = true
+                            for _, reagent in ipairs(v.reagents or {}) do
+                                if reagent.name then
+                                    reagentTotals[reagent.name] = (reagentTotals[reagent.name] or 0) + (reagent.count or 1) * missing
+                                end
+                            end
+                            break
                         end
                     end
                 end
@@ -1394,23 +1098,6 @@ function UpdateReagentList()
     reagentContent:SetHeight(yOffset)
 end
 
--- Addon: Automatically open the frame on guild invite
-local f = CreateFrame("Frame")
-f:RegisterEvent("GUILD_INVITE_REQUEST")
-f:SetScript("OnEvent", function(self, event, arg1)
-    if event == "GUILD_INVITE_REQUEST" then
-        -- Check if the player is already in the guild
-        if IsInGuild() then
-            return
-        end
-        -- Show the frame
-        frame:Show()
-        -- Optionally, you can also bring the frame to the front
-        frame:SetFrameStrata("HIGH")
-        frame:SetFrameLevel(1000)
-    end
-end)
-
 -- Function to update the overlay with reagent data (with color coding)
 function UpdateGSLReagentOverlay()
     -- Clear old fontstrings
@@ -1422,17 +1109,38 @@ function UpdateGSLReagentOverlay()
 
     local reagentTotals = {}
     GSLDebugPrint("UpdateGSLReagentOverlay: items count=" .. tostring(#items))
+    -- Debug print RecipeData keys
+    for prof, recipes in pairs(RecipeData) do
+        local keys = {}
+        for k in pairs(recipes) do table.insert(keys, k) end
+        GSLDebugPrint("RecipeData[" .. prof .. "] keys: " .. table.concat(keys, ", "))
+    end
     for _, item in ipairs(items) do
         GSLDebugPrint("UpdateGSLReagentOverlay: item=" .. tostring(item))
         local recipeName, count = item:match("^(.-) x(%d+)$")
         count = tonumber(count) or 1
+        -- Normalize recipeName (trim spaces)
+        recipeName = recipeName and recipeName:match("^%s*(.-)%s*$") or recipeName
         local found = false
         for prof, recipes in pairs(RecipeData) do
+            -- Try direct match, then lowercase match
             if recipes[recipeName] then
                 found = true
                 for _, reagent in ipairs(recipes[recipeName].reagents or {}) do
                     if reagent.name then
                         reagentTotals[reagent.name] = (reagentTotals[reagent.name] or 0) + (reagent.count or 1) * count
+                    end
+                end
+            else
+                for k, v in pairs(recipes) do
+                    if k:lower() == recipeName:lower() then
+                        found = true
+                        for _, reagent in ipairs(v.reagents or {}) do
+                            if reagent.name then
+                                reagentTotals[reagent.name] = (reagentTotals[reagent.name] or 0) + (reagent.count or 1) * count
+                            end
+                        end
+                        break
                     end
                 end
             end
@@ -1536,17 +1244,6 @@ function UpdateGSLReagentOverlay()
     overlayContent:SetHeight(yOffset)
 end
 
--- Slash command to show/hide the overlay
-SLASH_GSLREAGENTS1 = "/gslreagents"
-SlashCmdList["GSLREAGENTS"] = function()
-    if GSLReagentOverlayFrame:IsShown() then
-        GSLReagentOverlayFrame:Hide()
-    else
-        UpdateGSLReagentOverlay()
-        GSLReagentOverlayFrame:Show()
-    end
-end
-
 -- Button to open/close the overlay
 local overlayToggleButton = CreateFrame("Button", nil, frame, "GameMenuButtonTemplate")
 overlayToggleButton:SetSize(160, 30)
@@ -1626,135 +1323,6 @@ end
 -- Call once on load
 CenterBottomButtons()
 
--- Show the GSL Reagent Tracker overlay when the addon is loaded
---local gslOverlayInitFrame = CreateFrame("Frame")
---gslOverlayInitFrame:RegisterEvent("ADDON_LOADED")
---gslOverlayInitFrame:SetScript("OnEvent", function(self, event, arg1)
---    if arg1 == addonName then
---        UpdateGSLReagentOverlay()
---        GSLReagentOverlayFrame:Show()
---    end
---end)
-
--- Register comms on enable
-function GSL:OnEnable()
-    GSLDebugPrint("|cff00ff00[GSL]|r [DEBUG] GSL:OnEnable called. Registering AceComm callbacks.")
-    self:RegisterComm("GSLShare")
-    self:RegisterComm("GSLRequest")
-    if self.RegisterMessage then
-        self:RegisterMessage("OnCommReceived")
-    end
-end
-
--- RequestGSLData: Ask the guild for the latest GSL data
-function GSL:RequestGSLData()
-    GSLDebugPrint("|cff00ff00[GSL]|r [DEBUG] Sending Guild Sync request to guild. My timestamp: " .. tostring(GuildShoppingList_GSLDataSyncTimestamp))
-    self:SendCommMessage("GSLRequest", tostring(GuildShoppingList_GSLDataSyncTimestamp or 0), "GUILD")
-    print("|cff00ff00[GSL]|r Requested latest GuildShoppingList data from guild.")
-end
-
--- OnCommReceived: Handle incoming data and requests
-function GSL:OnCommReceived(prefix, message, distribution, sender)
-    if prefix == "GSLShare" then
-        GSLDebugPrint("|cff00ff00[GSL]|r [DEBUG] Received GSLShare from " .. (sender or "unknown") .. ". Message: " .. tostring(message))
-        local success, syncData = self:Deserialize(message)
-        if success and type(syncData) == "table" then
-            GSLDebugPrint("[GSL DEBUG] Received syncData table:")
-            for k, v in pairs(syncData) do
-                GSLDebugPrint("  " .. tostring(k) .. " = " .. tostring(v))
-            end
-            GSLDebugPrint("[GSL DEBUG] GatherStartDate: " .. tostring(syncData.GatherStartDate))
-            GSLDebugPrint("[GSL DEBUG] GatherEndDate: " .. tostring(syncData.GatherEndDate))
-            local incomingTimestamp = tonumber(syncData.GuildShoppingList_GSLDataSyncTimestamp or 0)
-            local localTimestamp = tonumber(GuildShoppingList_GSLDataSyncTimestamp or 0)
-            GSLDebugPrint("|cff00ff00[GSL]|r [DEBUG] Incoming timestamp: " .. tostring(incomingTimestamp) .. ", Local timestamp: " .. tostring(localTimestamp))
-            if incomingTimestamp > localTimestamp then
-                GSLDebugPrint("|cff00ff00[GSL]|r [DEBUG] Updating local data from " .. (syncData.player or sender))
-                GuildShoppingList_SavedItems = syncData.GuildShoppingList_SavedItems or {}
-                GuildShoppingList_GSLBankCache = syncData.GuildShoppingList_GSLBankCache or {}
-                print("[GSL DEBUG] GuildShoppingList_GSLBankCache updated by OnCommReceived (sync). Keys: " .. tostring(next(GuildShoppingList_GSLBankCache)))
-                GSLDebugPrint("[GSL] OnCommReceived: GuildShoppingList_GSLBankCache=" .. (GuildShoppingList_GSLBankCache and tostring(#(GuildShoppingList_GSLBankCache)) or "nil"))
-                for k,v in pairs(GuildShoppingList_GSLBankCache or {}) do GSLDebugPrint("[GSL] BankCache: " .. tostring(k) .. "=" .. tostring(v)) end
-                GuildShoppingList_GSLPlayerCache = syncData.GuildShoppingList_GSLPlayerCache or {}
-                GuildShoppingList_GSLDataSyncTimestamp = incomingTimestamp
-                -- Sync date range to SV and cache for non-GSL players
-                _G["GuildShoppingList_Config"] = _G["GuildShoppingList_Config"] or {}
-                _G["GuildShoppingList_Config"].GatherStartDate = syncData.GatherStartDate or "YYYY-MM-DD"
-                _G["GuildShoppingList_Config"].GatherEndDate = syncData.GatherEndDate or "YYYY-MM-DD"
-                GuildShoppingList_GatherStartDate = syncData.GatherStartDate or "YYYY-MM-DD"
-                GuildShoppingList_GatherEndDate = syncData.GatherEndDate or "YYYY-MM-DD"
-                if UpdateGSLPlayerText then UpdateGSLPlayerText() end
-                print("|cff00ff00[GSL]|r GuildShoppingList data updated from " .. (syncData.player or sender) .. ". |cffff0000Please /reload your UI to see the updated data.|r")
-                if UpdateList then UpdateList() end
-                if UpdateReagentList then UpdateReagentList() end
-                if UpdateGSLReagentOverlay then UpdateGSLReagentOverlay() end
-            else
-                GSLDebugPrint("|cffffff00[GSL]|r [DEBUG] Received older or same data from " .. (syncData.player or sender) .. "; ignoring.")
-            end
-        else
-            GSLDebugPrint("|cffff0000[GSL]|r [DEBUG] Failed to deserialize GSLShare message from " .. (sender or "unknown") .. ".")
-        end
-    elseif prefix == "GSLRequest" then
-        GSLDebugPrint("|cff00ff00[GSL]|r [DEBUG] Received GSLRequest from " .. (sender or "unknown") .. ". Message: " .. tostring(message))
-        local requesterTimestamp = tonumber(message or 0)
-        local localTimestamp = tonumber(GuildShoppingList_GSLDataSyncTimestamp or 0)
-        GSLDebugPrint("|cff00ff00[GSL]|r [DEBUG] Requester timestamp: " .. tostring(requesterTimestamp) .. ", Local timestamp: " .. tostring(localTimestamp))
-        if localTimestamp > requesterTimestamp then
-            print("|cff00ff00[GSL]|r [DEBUG] Sending updated data to " .. sender)
-            -- Send data to the requester only
-            local svTable = _G["GuildShoppingList_Config"] or {}
-            local syncData = {
-                player = UnitName("player"),
-                GuildShoppingList_SavedItems = GuildShoppingList_SavedItems,
-                GuildShoppingList_GSLBankCache = GuildShoppingList_GSLBankCache,
-                GuildShoppingList_GSLPlayerCache = GuildShoppingList_GSLPlayerCache,
-                GuildShoppingList_GSLDataSyncTimestamp = localTimestamp,
-                GatherStartDate = svTable.GatherStartDate or "YYYY-MM-DD",
-                GatherEndDate = svTable.GatherEndDate or "YYYY-MM-DD",
-            }
-            local serialized = self:Serialize(syncData)
-            self:SendCommMessage("GSLShare", serialized, "WHISPER", sender)
-            print("|cff00ff00[GSL]|r Sent GuildShoppingList data to " .. sender .. ".")
-        else
-            print("|cffffff00[GSL]|r [DEBUG] Local data is not newer than requester; not sending.")
-        end
-    end
-end
-
--- Register comms when the addon is loaded
-local gslCommInitFrame = CreateFrame("Frame")
-gslCommInitFrame:RegisterEvent("ADDON_LOADED")
-gslCommInitFrame:SetScript("OnEvent", function(self, event, arg1)
-    if arg1 == addonName then
-        if GSL.OnEnable then GSL:OnEnable() end
-    end
-end)
-
--- Automatically sync local data when bags change (item added/removed)
-local bagSyncFrame = CreateFrame("Frame")
-bagSyncFrame:RegisterEvent("BAG_UPDATE")
-bagSyncFrame:SetScript("OnEvent", function(self, event, arg1)
-    ScanAndSaveReagents()
-    if GetGSLPlayer and GetGSLPlayer() == UnitName("player") then
-        if CacheGSLPlayerBagCache then CacheGSLPlayerBagCache() end
-    end
-    if UpdateList then UpdateList() end
-    if UpdateReagentList then UpdateReagentList() end
-    if UpdateGSLReagentOverlay then UpdateGSLReagentOverlay() end
-end)
-
-local bankSyncFrame = CreateFrame("Frame")
-bankSyncFrame:RegisterEvent("BANKFRAME_OPENED")
-bankSyncFrame:RegisterEvent("BANKFRAME_CLOSED")
-bankSyncFrame:SetScript("OnEvent", function(self, event)
-    ScanAndSaveReagents()
-    if event == "BANKFRAME_OPENED" and GetGSLPlayer and GetGSLPlayer() == UnitName("player") then
-    -- Only scan bank when bank is open, not on load
-    end
-    if UpdateList then UpdateList() end
-    if UpdateReagentList then UpdateReagentList() end
-    if UpdateGSLReagentOverlay then UpdateGSLReagentOverlay() end
-end)
 -- Set Date Range Button
 
 local setDateRangeButton = CreateFrame("Button", nil, frame, "GameMenuButtonTemplate")
