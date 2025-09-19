@@ -173,6 +173,7 @@ end)
 -- Version assignment logic (top-level)
 GSL.Version = "@project-version@"
 if GSL.Version == "@project-version@" or not GSL.Version or GSL.Version == "" then
+    -- fallback for testing
     local playerName, realm = UnitName("player"), GetRealmName()
     if playerName == "Pickyminer" and realm == "OldBlanchy" then
         GSL.Version = "1.0.1"
