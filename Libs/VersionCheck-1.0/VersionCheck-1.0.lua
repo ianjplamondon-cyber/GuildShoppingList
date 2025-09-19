@@ -1,4 +1,3 @@
--- Slash command registration for debugging (must be top-level)
 SLASH_VCD1 = "/vcd"
 SLASH_VCDON1 = "/vcdon"
 SLASH_VCDOFF1 = "/vcdoff"
@@ -27,13 +26,15 @@ local function VCPrint(msg)
         print("[VersionCheck] " .. tostring(msg))
     end
 end
--- VersionCheck-1.0.lua
--- Standalone library for WoW Classic addon version checking via AceComm-3.0
--- Usage: local VC = LibStub("VersionCheck-1.0")
 
 local MAJOR, MINOR = "VersionCheck-1.0", 2
 local VC, oldminor = LibStub:NewLibrary(MAJOR, MINOR)
 if not VC then return end
+
+-- Table to store version responses (must be after VC is defined)
+VC.VersionResponses = {}
+VC.VersionCheckActive = false
+VC.VersionCheckTimer = nil
 
 VC.PREFIX = "VCHECK"
 VC.RESPONSE_PREFIX = "VCRESP"
@@ -56,9 +57,16 @@ function VC:Enable(hostAddon)
         VCPrint("Received message on prefix: " .. tostring(prefix) .. " from " .. tostring(sender))
         VC:OnCommReceived(prefix, message, distribution, sender)
     end)
+    AceComm:RegisterComm(self.RESPONSE_PREFIX, function(prefix, message, distribution, sender)
+        VCPrint("Received message on prefix: " .. tostring(prefix) .. " from " .. tostring(sender))
+        VC:OnCommReceived(prefix, message, distribution, sender)
+    end)
 function VC:TriggerVersionCheck()
     local myVersion = (VC.hostAddon and VC.hostAddon.Version) or "unknown"
     VCPrint("TriggerVersionCheck called. My version: " .. tostring(myVersion))
+    VC.VersionResponses = {} -- reset responses
+    VC.VersionCheckActive = true
+    if VC.VersionCheckTimer then VC.VersionCheckTimer:Cancel() end
     VC:SendVersionCheck(myVersion)
 end
 end
@@ -103,12 +111,34 @@ function VC:OnCommReceived(prefix, message, distribution, sender)
             VCPrint("Failed to deserialize version from " .. tostring(sender))
         end
     elseif prefix == VC.RESPONSE_PREFIX then
-        VCPrint("OnCommReceived: VCRESP from " .. tostring(sender) .. " via " .. tostring(distribution))
         local success, version = AceSerializer:Deserialize(message)
         if success then
-            VCPrint(sender .. " is using version: " .. tostring(version))
+            if _G.VC_DebugEnabled then
+                print("[VersionCheck] Received VCRESP from " .. tostring(sender) .. ": " .. tostring(version))
+            end
+            if VC.VersionCheckActive then
+                VC.VersionResponses[sender] = version
+                -- Start/refresh timer to process responses after 2 seconds
+                if VC.VersionCheckTimer then VC.VersionCheckTimer:Cancel() end
+                VC.VersionCheckTimer = C_Timer.NewTimer(2, function()
+                    VC.VersionCheckActive = false
+                    local highestSender, highestVersion = nil, nil
+                    for s, v in pairs(VC.VersionResponses) do
+                        if not highestVersion or VC:CompareVersion(v, highestVersion) > 0 then
+                            highestSender, highestVersion = s, v
+                        end
+                    end
+                    if highestSender and highestVersion then
+                        print("[VersionCheck] Highest version in guild: " .. tostring(highestVersion) .. " (" .. tostring(highestSender) .. ")")
+                    else
+                        print("[VersionCheck] No version responses received.")
+                    end
+                end)
+            end
         else
-            VCPrint("Failed to deserialize response from " .. tostring(sender))
+            if _G.VC_DebugEnabled then
+                print("[VersionCheck] Failed to deserialize response from " .. tostring(sender))
+            end
         end
     end
 

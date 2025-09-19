@@ -4,6 +4,7 @@
 addonName = ...
 GSL = LibStub("AceAddon-3.0"):NewAddon("GuildShoppingList", "AceComm-3.0", "AceSerializer-3.0")
 
+
 -- SavedVariables Initialization
 GuildShoppingList_Config = GuildShoppingList_Config or {}
 GuildShoppingList_SavedItems = GuildShoppingList_SavedItems or {}
@@ -16,16 +17,16 @@ function GSL:OnInitialize()
     GSLDebugPrint("|cff00ff00[GSL]|r [DEBUG] GSL:OnInitialize called.")
     GuildShoppingList_SavedItems = GuildShoppingList_SavedItems or {}
     items = GuildShoppingList_SavedItems
+    VC = LibStub("VersionCheck-1.0", true)
     GuildShoppingList_ReagentData = GuildShoppingList_ReagentData or {}
     -- Do NOT overwrite GuildShoppingList_GSLBankCache on reload or initialization
 
-    -- Ensure VC debug flag is set from SV
+    -- Ensure VC debug flag is enforced from SV for all characters
     GuildShoppingList_Config = GuildShoppingList_Config or {}
     if GuildShoppingList_Config.VCDebugEnabled == nil then
         GuildShoppingList_Config.VCDebugEnabled = false
     end
-    VC_DebugEnabled = GuildShoppingList_Config.VCDebugEnabled
-    _G.VC_DebugEnabled = VC_DebugEnabled
+    _G.VC_DebugEnabled = GuildShoppingList_Config.VCDebugEnabled or false
     GSLDebugPrint("[GSL] SV cache loaded at OnInitialize, keys: " .. tostring(next(GuildShoppingList_GSLBankCache)))
 end
 
