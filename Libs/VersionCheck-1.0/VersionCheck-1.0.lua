@@ -1,3 +1,4 @@
+
 SLASH_VCD1 = "/vcd"
 SLASH_VCDON1 = "/vcdon"
 SLASH_VCDOFF1 = "/vcdoff"
@@ -140,10 +141,10 @@ function VC:OnCommReceived(prefix, message, distribution, sender)
                     end
                     if highestSender and highestVersion then
                         print("[VersionCheck] Highest version in guild: " .. tostring(highestVersion) .. " (" .. tostring(highestSender) .. ")")
-                        -- Show popup if any version is lower than mine
+                        -- Show popup if MY version is lower than the highest in guild
                         local myVersion = (VC.hostAddon and VC.hostAddon.Version) or "unknown"
-                        if lowestVersion and VC:CompareVersion(lowestVersion, myVersion) < 0 then
-                            VC:ShowUpdatePopup(lowestSender, lowestVersion, myVersion)
+                        if highestVersion and VC:CompareVersion(myVersion, highestVersion) < 0 then
+                            VC:ShowUpdatePopup(highestSender, highestVersion, myVersion)
                         end
                     else
                         print("[VersionCheck] No version responses received.")
@@ -153,7 +154,7 @@ function VC:OnCommReceived(prefix, message, distribution, sender)
 -- Popup function
 function VC:ShowUpdatePopup(sender, oldVersion, myVersion)
     local addonName = (VC.hostAddon and VC.hostAddon:GetName()) or "This addon"
-    local message = addonName .. " may be out of date!\nGuild member '" .. tostring(sender) .. "' is using version " .. tostring(oldVersion) .. ".\nPlease update to " .. tostring(myVersion) .. " through CurseForge."
+    local message = addonName .. " may be out of date!\nGuild member '" .. tostring(sender) .. "' is using version " .. tostring(oldVersion) .. ".\nPlease update to " .. tostring(oldVersion) .. " through CurseForge."
     StaticPopupDialogs["VC_UPDATE_WARNING"] = {
         text = message,
         button1 = "OK",

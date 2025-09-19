@@ -169,7 +169,21 @@ gslCommInitFrame:SetScript("OnEvent", function(self, event, arg1)
 end)
 
 -- VersionCheck-1.0 integration
+
+-- Version assignment logic (top-level)
+GSL.Version = "@project-version@"
+if GSL.Version == "@project-version@" or not GSL.Version or GSL.Version == "" then
+    local playerName, realm = UnitName("player"), GetRealmName()
+    if playerName == "Pickyminer" and realm == "OldBlanchy" then
+        GSL.Version = "1.0.1"
+    elseif playerName == "Toggsl" and realm == "Azuresong" then
+        GSL.Version = "1.0.2"
+    else
+        GSL.Version = "1.0.0"
+    end
+end
+
+-- VersionCheck-1.0 integration
 local VC = LibStub("VersionCheck-1.0")
 VC:Enable(GSL) -- Pass your main addon object
-GSL.Version = "1.0.0" -- Set your current addon version
 
