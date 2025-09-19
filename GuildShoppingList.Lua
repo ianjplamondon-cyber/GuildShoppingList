@@ -589,6 +589,9 @@ function UpdateList()
             btn = CreateFrame("Button", nil, listContent, "UIPanelButtonTemplate")
             btn:SetSize(30, 16)
             btn:SetText("Edit")
+            if btn.Text then
+                btn.Text:SetFont("Fonts\\FRIZQT__.TTF", 10, "")
+            end
             editButtons[i] = btn
         end
         btn:SetPoint("LEFT", listFontStrings[i][4], "RIGHT", 10, 0)
